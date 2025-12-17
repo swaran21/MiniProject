@@ -2,9 +2,9 @@ import React, { useState } from "react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function DietTrackerComponent() {
-  // 1. Profile Data State (Required for Backend Logic)
-  const [profileData, setProfileData] = useState({
+function DietTrackerComponent({ userProfile }) {
+  // 1. Profile Data State (Pre-filled from persistent profile)
+  const [profileData, setProfileData] = useState(userProfile || {
     weightKg: "",
     heightCm: "",
     age: "",
@@ -49,7 +49,7 @@ function DietTrackerComponent() {
     };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/diet/track-and-recommend`, {
+      const response = await fetch(`${API_BASE_URL}/api/diet/recommend`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

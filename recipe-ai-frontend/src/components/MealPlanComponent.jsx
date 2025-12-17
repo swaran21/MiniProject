@@ -2,9 +2,9 @@ import React, { useState } from "react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function MealPlanComponent() {
-  // We need a full form state to match the Java 'UserHealthProfile' class
-  const [formData, setFormData] = useState({
+function MealPlanComponent({ userProfile }) {
+  // Pre-fill form with global user profile
+  const [formData, setFormData] = useState(userProfile || {
     weightKg: "",
     heightCm: "",
     age: "",
@@ -31,7 +31,7 @@ function MealPlanComponent() {
 
     try {
       // Now we send the ACTUAL user inputs to the backend
-      const response = await fetch(`${API_BASE_URL}/api/meal-plans/generate`, {
+      const response = await fetch(`${API_BASE_URL}/api/meal-plan/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

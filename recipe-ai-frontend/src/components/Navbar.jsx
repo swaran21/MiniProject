@@ -6,7 +6,7 @@ function Navbar({ activeTab, setActiveTab }) {
       <div className="logo">NutriChef AI 🥗</div>
       <div className="nav-links">
         <button 
-          className={activeTab === "health" ? "active" : ""} 
+          className={`nav-link ${activeTab === "health" ? "active" : ""}`} 
           onClick={() => setActiveTab("health")}
         >
           Health Tracker
@@ -14,21 +14,21 @@ function Navbar({ activeTab, setActiveTab }) {
         
         {/* NEW BUTTON */}
         <button 
-          className={activeTab === "diet" ? "active" : ""} 
+          className={`nav-link ${activeTab === "diet" ? "active" : ""}`} 
           onClick={() => setActiveTab("diet")}
         >
           Smart Diet
         </button>
 
         <button 
-          className={activeTab === "recipe" ? "active" : ""} 
+          className={`nav-link ${activeTab === "recipe" ? "active" : ""}`} 
           onClick={() => setActiveTab("recipe")}
         >
           Recipe Generator
         </button>
         
         <button 
-          className={activeTab === "mealplan" ? "active" : ""} 
+          className={`nav-link ${activeTab === "mealplan" ? "active" : ""}`} 
           onClick={() => setActiveTab("mealplan")}
         >
           Meal Planner

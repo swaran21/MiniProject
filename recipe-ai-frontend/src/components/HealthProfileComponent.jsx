@@ -2,8 +2,9 @@ import React, { useState } from "react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function HealthProfileComponent() {
-  const [formData, setFormData] = useState({
+function HealthProfileComponent({ userProfile, onUpdateProfile }) {
+  // Use prop state if available, else local
+  const [formData, setFormData] = useState(userProfile || {
     weightKg: "",
     heightCm: "",
     age: "",
@@ -14,11 +15,17 @@ function HealthProfileComponent() {
   const [result, setResult] = useState(null);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const updated = { ...formData, [e.target.name]: e.target.value };
+    setFormData(updated);
+    // Auto-save on change? Or wait for submit? Let's save on submit for now to be explicit, 
+    // OR save on change for "real-time" feel. Let's start with local state and save on submit.
   };
 
   const analyzeHealth = async (e) => {
     e.preventDefault();
+    // Save to global state
+    if (onUpdateProfile) onUpdateProfile(formData);
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/health/analyze`, {
         method: "POST",
