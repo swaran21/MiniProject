@@ -1,0 +1,34 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules
+# Vite build output
+dist
+dist-ssr
+# Coverage directory
+# coverage
+# nyc output
+# .nyc_output
+
+# Local environment variables and sensitive files
+*.local # Covers .env.local, etc.
+.env    # Specifically ignores the .env file
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json # Good practice to share recommended extensions
+.idea
+# .DS_Store is Mac specific, good to include
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

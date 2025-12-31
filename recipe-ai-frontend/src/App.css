@@ -1,0 +1,91 @@
+.App {
+  min-height: 100vh;
+}
+
+.navbar {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem 0;
+  margin-bottom: 3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-link {
+  background: transparent;
+  color: var(--text-dim);
+  border: none;
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.nav-link.active {
+  color: white;
+  background: var(--primary);
+}
+
+.main-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Result Cards */
+.recipe-card, .plan-results, .result-card {
+  margin-top: 2rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.recipe-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.meal-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  margin-bottom: 0.8rem;
+  border-radius: var(--radius);
+  transition: transform 0.2s;
+}
+
+.meal-item:hover {
+  transform: scale(1.01);
+  border-color: var(--primary);
+}
+
+.meal-type-badge {
+  background: var(--secondary);
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  min-width: 80px;
+  text-align: center;
+}
+
+.error-message {
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.1);
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-top: 1rem;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}

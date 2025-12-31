@@ -1,0 +1,74 @@
+# --- Python (pythonML) ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+# Venv
+venv/
+.venv/
+Scripts/
+
+# --- ML Models & Training Data ---
+# Trained models and checkpoints (large files - do not commit!)
+pythonML/app/models/recipe_gpt2/
+pythonML/data/recipe_training.txt
+pythonML/data/cached_*
+# Hugging Face cache
+.cache/
+*.safetensors
+*.bin
+# Training logs
+pythonML/app/models/*/logs/
+
+# --- Java / Maven (recipe-backend) ---
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+.classpath
+.project
+.settings/
+.springBeans
+.sts4-cache
+bin/
+# InteillJ
+.idea/
+*.iml
+*.iws
+
+# --- Node / React (recipe-ai-frontend) ---
+node_modules/
+.pnp
+.pnp.js
+coverage/
+# Production
+/recipe-ai-frontend/dist/
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
