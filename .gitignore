@@ -28,6 +28,18 @@ venv/
 .venv/
 Scripts/
 
+# --- ML Models & Training Data ---
+# Trained models and checkpoints (large files - do not commit!)
+pythonML/app/models/recipe_gpt2/
+pythonML/data/recipe_training.txt
+pythonML/data/cached_*
+# Hugging Face cache
+.cache/
+*.safetensors
+*.bin
+# Training logs
+pythonML/app/models/*/logs/
+
 # --- Java / Maven (recipe-backend) ---
 target/
 !.mvn/wrapper/maven-wrapper.jar
