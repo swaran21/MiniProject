@@ -44,8 +44,14 @@ class MealPlanResponse(BaseModel):
     suggestion: str
     meals: List[Meal]
 
+class RecommendedMeal(BaseModel):
+    type: str # Breakfast, Lunch, Dinner, Snack
+    recipe: RecipeResponse
+    suggestionReason: str
+
 class DietRecommendationResponse(BaseModel):
     caloriesConsumedEstimate: int
     caloriesRemaining: int
     nutritionalAnalysis: str
     nextMealSuggestion: str
+    dayPlan: List[RecommendedMeal] = []

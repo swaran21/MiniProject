@@ -60,6 +60,7 @@ function DietTrackerComponent({ userProfile }) {
       }
 
       const data = await response.json();
+      console.log("API Response:", data); // Debugging
       setRecommendation(data);
     } catch (err) {
       console.error("Error:", err);
@@ -134,7 +135,7 @@ function DietTrackerComponent({ userProfile }) {
 
       {error && <p className="error-message">{error}</p>}
 
-      {/* Results Section */}
+{/* Results Section */}
       {recommendation && (
         <div className="result-card" style={{ display: "block", marginTop: "25px", borderLeft: "5px solid #4CAF50" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px" }}>
@@ -151,10 +152,61 @@ function DietTrackerComponent({ userProfile }) {
             <p style={{ margin: 0 }}>{recommendation.nutritionalAnalysis}</p>
           </div>
 
-          <div style={{ background: "#e8f5e9", padding: "10px", borderRadius: "5px" }}>
-            <h4 style={{ color: "#2E7D32", margin: "0 0 5px 0" }}>Next Meal Recommendation:</h4>
-            <p style={{ margin: 0, fontWeight: "500" }}>{recommendation.nextMealSuggestion}</p>
-          </div>
+          <h4 style={{ color: "#2E7D32", margin: "0 0 15px 0" }}>Your Full Day Plan:</h4>
+          
+          {recommendation.dayPlan && recommendation.dayPlan.length > 0 ? (
+            <div style={{ display: "grid", gap: "15px" }}>
+              {recommendation.dayPlan.map((meal, idx) => {
+                let cardColor = "#fff";
+                let borderColor = "#ccc";
+                let icon = "🍽️";
+
+                if (meal.type.includes("Breakfast")) {
+                  cardColor = "#FFF3E0"; // Warm Orange
+                  borderColor = "#FF9800";
+                  icon = "🌅";
+                } else if (meal.type.includes("Lunch")) {
+                  cardColor = "#E8F5E9"; // Fresh Green
+                  borderColor = "#4CAF50";
+                  icon = "🥗";
+                } else if (meal.type.includes("Dinner")) {
+                  cardColor = "#E3F2FD"; // Calm Blue
+                  borderColor = "#2196F3";
+                  icon = "🌙";
+                } else {
+                  cardColor = "#FCE4EC"; // Pink Snack
+                  borderColor = "#E91E63";
+                  icon = "🍎";
+                }
+
+                return (
+                  <div key={idx} style={{ 
+                    background: cardColor, 
+                    borderLeft: `5px solid ${borderColor}`, 
+                    padding: "15px", 
+                    borderRadius: "8px",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
+                      <h5 style={{ margin: 0, fontSize: "1.1rem", color: "#333" }}>{icon} {meal.type}</h5>
+                      <span style={{ fontWeight: "bold", color: borderColor }}>{meal.recipe.calories} kcal</span>
+                    </div>
+                    <h4 style={{ margin: "5px 0", color: "#444" }}>{meal.recipe.title}</h4>
+                    <p style={{ fontSize: "0.9rem", color: "#666", marginBottom: "5px" }}>
+                      <em>{meal.recipe.ingredients.slice(0, 4).join(", ")}...</em>
+                    </p>
+                    <small style={{ color: "#777", display: "block", marginTop: "5px" }}>
+                      💡 {meal.suggestionReason}
+                    </small>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+             <div style={{ background: "#e8f5e9", padding: "10px", borderRadius: "5px" }}>
+              <p style={{ margin: 0, fontWeight: "500" }}>{recommendation.nextMealSuggestion}</p>
+            </div>
+          )}
         </div>
       )}
     </div>

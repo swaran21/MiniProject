@@ -4,7 +4,9 @@ from app.models import (
     UserProfile, MealPlanResponse, 
     DietLogRequest, DietRecommendationResponse
 )
-from app.services.ml_service import RecipeService, MealPlanService, DietService
+from app.services.recipe_service import RecipeService
+from app.services.meal_service import MealPlanService
+from app.services.diet_service import DietService
 
 app = FastAPI(title="NutriChef AI - Machine Learning Microservice")
 
