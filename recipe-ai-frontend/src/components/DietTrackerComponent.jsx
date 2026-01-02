@@ -155,7 +155,7 @@ function DietTrackerComponent({ userProfile }) {
           <h4 style={{ color: "#2E7D32", margin: "0 0 15px 0" }}>Your Full Day Plan:</h4>
           
           {recommendation.dayPlan && recommendation.dayPlan.length > 0 ? (
-            <div style={{ display: "grid", gap: "15px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
               {recommendation.dayPlan.map((meal, idx) => {
                 let cardColor = "#fff";
                 let borderColor = "#ccc";
@@ -203,8 +203,12 @@ function DietTrackerComponent({ userProfile }) {
               })}
             </div>
           ) : (
-             <div style={{ background: "#e8f5e9", padding: "10px", borderRadius: "5px" }}>
-              <p style={{ margin: 0, fontWeight: "500" }}>{recommendation.nextMealSuggestion}</p>
+
+             <div style={{ background: "#fff", borderLeft: "5px solid #607D8B", padding: "15px", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
+                 <h5 style={{ margin: 0, fontSize: "1.1rem", color: "#333" }}>💡 Recommendation</h5>
+              </div>
+              <p style={{ margin: 0, color: "#555" }}>{recommendation.nextMealSuggestion}</p>
             </div>
           )}
         </div>

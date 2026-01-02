@@ -98,7 +98,7 @@ class DietService:
 
         for meal_name, ratio in schedule:
             meal_cals = int(rem * ratio)
-            if meal_cals < 50: continue # Skip tiny meals
+            if meal_cals < 200: meal_cals = 200 # Enforce minimum per meal to ensure generation
             
             # Select unique ingredients for this meal
             selected_ingredients = random.sample(base_pool, min(3, len(base_pool)))
