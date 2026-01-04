@@ -94,16 +94,20 @@ class RecipeService:
             try:
                 ml_recipe = self._generate_with_ml(request.ingredients)
                 
-                # Calculate real calories and macros using NutritionService
-                ingredients_list = ml_recipe['ingredients'] if ml_recipe['ingredients'] else request.ingredients.split(',')
-                nutrition = self.nutrition_service.estimate_calories(ingredients_list)
+                # QUICK FIX: Calculate calories from USER'S original ingredients ONLY
+                # (GPT-2 adds extra ingredients which inflates the calorie count)
+                user_ingredients = [i.strip() for i in request.ingredients.split(',')]
+                nutrition = self.nutrition_service.estimate_calories(user_ingredients)
+                
+                # But show GPT-2's full ingredient list in the recipe
+                ingredients_list = ml_recipe['ingredients'] if ml_recipe['ingredients'] else user_ingredients
                 
                 return RecipeResponse(
                     title=ml_recipe['title'] + " (ML Powered)",
                     ingredients=ingredients_list,
                     instructions=ml_recipe['instructions'] if ml_recipe['instructions'] else "Generated recipe instructions",
                     cuisineType=request.cuisine,
-                    calories=nutrition['calories'],
+                    calories=nutrition['calories'],  # ← Based on USER input, not GPT-2 extras
                     imageUrl="https://via.placeholder.com/300?text=" + ml_recipe['title'].replace(" ", "+")
                 )
             except Exception as e:

@@ -114,11 +114,12 @@ class DietService:
                 dietaryRestrictions=diet_strategy
             ))
             
-            # Update Recipe Calories to match allocation
-            gen_recipe.calories = meal_cals
+            # DON'T override - use the real calorie calculation from recipe service!
+            # The recipe_service now uses NutritionService for accurate calories
+            # gen_recipe.calories = meal_cals  # REMOVED: Was overriding real data
             
             # Add to Text Summary (Backward Compat)
-            plan_text.append(f"**{meal_name}** (~{meal_cals} kcal)")
+            plan_text.append(f"**{meal_name}** (~{gen_recipe.calories} kcal)")
             plan_text.append(f"🍽️ **{gen_recipe.title}**")
             plan_text.append(f"_{', '.join(gen_recipe.ingredients[:5])}_")
             plan_text.append("") 
@@ -127,7 +128,7 @@ class DietService:
             structured_plan.append(RecommendedMeal(
                 type=meal_name,
                 recipe=gen_recipe,
-                suggestionReason=f"Allocated {meal_cals} kcal for your {diet_strategy} plan."
+                suggestionReason=f"Suggested based on your {diet_strategy} plan (Real: {gen_recipe.calories} kcal)."
             ))
             
         return DietRecommendationResponse(

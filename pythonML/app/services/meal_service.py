@@ -96,13 +96,15 @@ class MealPlanService:
             )
             gen_recipe = self.recipe_service.generate(recipe_req)
             
+            # Use the REAL calorie calculation from the generated recipe
+            # (RecipeService now uses NutritionService for accurate calories)
             meals.append(Meal(
                 name=gen_recipe.title,
                 type=m_type,
-                calories=meal_target,
-                macros=f"{strategy} Optimized" 
+                calories=gen_recipe.calories,  # ← Real calories from NutritionService!
+                macros=f"{strategy} Optimized ({gen_recipe.calories} kcal)" 
             ))
-            current_cal += meal_target
+            current_cal += gen_recipe.calories
 
         return MealPlanResponse(
             goal=profile.healthGoals,
