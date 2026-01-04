@@ -1,6 +1,7 @@
 from app.models import DietLogRequest, DietRecommendationResponse, RecipeRequest, RecommendedMeal
 from app.services.recipe_service import RecipeService
 from app.services.meal_service import MealPlanService
+from app.services.nutrition_service import NutritionService
 from app.utils.data_consts import FOOD_CALORIES
 import pandas as pd
 import pickle
@@ -16,6 +17,7 @@ class DietService:
         self._load_model()
         self.recipe_service = RecipeService() # Reuse this instance
         self.mp_service = MealPlanService()
+        self.nutrition_service = NutritionService()  # For real calorie calculations
 
     def _load_model(self):
         try:
@@ -28,10 +30,9 @@ class DietService:
             pass 
 
     def recommend(self, request: DietLogRequest) -> DietRecommendationResponse:
-        # 1. Analyze Context (Current Food)
+        # 1. Analyze Context (Current Food) - Use real nutrition service
         item = request.foodItem.lower()
-        # Simple lookup or default
-        est_cals = next((v for k, v in FOOD_CALORIES.items() if k in item), 300)
+        est_cals = self.nutrition_service.estimate_meal_calories(item)
         
         # 2. Calculate Limits
         limit = self.mp_service._calculate_bmr(request.userProfile)

@@ -1,5 +1,6 @@
 from app.models import RecipeRequest, RecipeResponse
 from app.utils.data_consts import RECIPE_TEMPLATES
+from app.services.nutrition_service import NutritionService
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import os
 import random
@@ -8,6 +9,9 @@ import re
 class RecipeService:
     def __init__(self):
         """Initialize and load the trained GPT-2 recipe model"""
+        # Initialize nutrition service for real calorie calculations
+        self.nutrition_service = NutritionService()
+        
         model_path = "app/models/recipe_gpt2"
         if os.path.exists(model_path):
             try:
@@ -90,15 +94,16 @@ class RecipeService:
             try:
                 ml_recipe = self._generate_with_ml(request.ingredients)
                 
-                # Estimate calories based on ingredients count and type
-                calories = random.randint(300, 700)
+                # Calculate real calories and macros using NutritionService
+                ingredients_list = ml_recipe['ingredients'] if ml_recipe['ingredients'] else request.ingredients.split(',')
+                nutrition = self.nutrition_service.estimate_calories(ingredients_list)
                 
                 return RecipeResponse(
                     title=ml_recipe['title'] + " (ML Powered)",
-                    ingredients=ml_recipe['ingredients'] if ml_recipe['ingredients'] else request.ingredients.split(','),
+                    ingredients=ingredients_list,
                     instructions=ml_recipe['instructions'] if ml_recipe['instructions'] else "Generated recipe instructions",
                     cuisineType=request.cuisine,
-                    calories=calories,
+                    calories=nutrition['calories'],
                     imageUrl="https://via.placeholder.com/300?text=" + ml_recipe['title'].replace(" ", "+")
                 )
             except Exception as e:
@@ -115,13 +120,15 @@ class RecipeService:
         
         title = template_title.format(Cuisine=request.cuisine, Main=main_item, Sides=sides)
         instructions = template_instr.format(ingredients=request.ingredients, main_item=main_item)
-        final_cal = random.randint(300, 800)
+        
+        # Calculate real calories for template recipes
+        nutrition = self.nutrition_service.estimate_calories(ings)
 
         return RecipeResponse(
             title=title + " (Algorithmic AI)",
             ingredients=ings + ["Olive Oil", "Salt", "Special Herbs"],
             instructions=instructions,
             cuisineType=request.cuisine,
-            calories=final_cal,
+            calories=nutrition['calories'],
             imageUrl="https://via.placeholder.com/300?text=" + title.replace(" ", "+")
         )
