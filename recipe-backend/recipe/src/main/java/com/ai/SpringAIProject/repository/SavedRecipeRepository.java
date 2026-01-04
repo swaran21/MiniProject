@@ -3,7 +3,9 @@ package com.ai.SpringAIProject.repository;
 import com.ai.SpringAIProject.model.SavedRecipe;
 import com.ai.SpringAIProject.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,5 +19,7 @@ public interface SavedRecipeRepository extends JpaRepository<SavedRecipe, Long> 
     List<SavedRecipe> findByUserIdOrderBySavedAtDesc(Long userId);
     
     // Delete a saved recipe by ID and user ID (for security)
-    void deleteByIdAndUserId(Long id, Long userId);
+    @Transactional
+    @Modifying
+    Long deleteByIdAndUserId(Long id, Long userId);
 }

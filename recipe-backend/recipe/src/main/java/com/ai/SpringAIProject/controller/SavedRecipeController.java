@@ -5,10 +5,12 @@ import com.ai.SpringAIProject.model.User;
 import com.ai.SpringAIProject.repository.SavedRecipeRepository;
 import com.ai.SpringAIProject.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -57,16 +59,20 @@ public class SavedRecipeController {
         try {
             List<SavedRecipe> recipes = savedRecipeRepository.findByUserIdOrderBySavedAtDesc(userId);
             
-            // Convert to response format
+            // Convert to response format using TypeReference
+            TypeReference<HashMap<String,Object>> typeRef = new TypeReference<HashMap<String,Object>>() {};
+            
             List<Map<String, Object>> response = recipes.stream()
                     .map(r -> {
                         try {
-                            Map<String, Object> recipeMap = objectMapper.readValue(r.getRecipeJson(), Map.class);
+                            HashMap<String, Object> recipeMap = objectMapper.readValue(r.getRecipeJson(), typeRef);
                             recipeMap.put("savedId", r.getId());
                             recipeMap.put("savedAt", r.getSavedAt().toString());
-                            return recipeMap;
+                            return (Map<String, Object>) recipeMap;
                         } catch (Exception e) {
-                            return Map.of("error", "Failed to parse recipe");
+                            HashMap<String, Object> errorMap = new HashMap<>();
+                            errorMap.put("error", "Failed to parse recipe");
+                            return errorMap;
                         }
                     })
                     .toList();
