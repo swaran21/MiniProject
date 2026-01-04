@@ -30,20 +30,21 @@ class RecipeService:
             self.use_ml = False
     
     def _generate_with_ml(self, ingredients: str) -> dict:
-        """Generate recipe using trained GPT-2 model"""
+        """Generate recipe using trained GPT-2 model with improved output quality"""
         # Format input for the model
         input_text = f"INPUT: {ingredients}\nOUTPUT:"
         
-        # Tokenize (using cpu/gpu automatically handled by pytorch usually, but here default cpu is fine for inference)
+        # Tokenize
         inputs = self.tokenizer(input_text, return_tensors='pt')
         
-        # Generate
+        # IMPROVED GENERATION PARAMETERS (Session 2)
         outputs = self.model.generate(
             inputs['input_ids'],
             max_length=400,
             num_return_sequences=1,
-            temperature=0.8,
-            top_p=0.9,
+            temperature=0.7,           # Lower = more conservative (was 0.8)
+            top_p=0.85,                # Lower = less wild (was 0.9)
+            repetition_penalty=1.3,    # NEW: Prevent repetition
             do_sample=True,
             pad_token_id=self.tokenizer.eos_token_id,
             eos_token_id=self.tokenizer.encode('<END>')[0] if '<END>' in self.tokenizer.get_vocab() else self.tokenizer.eos_token_id
@@ -60,32 +61,94 @@ class RecipeService:
         else:
             recipe_text = generated_text
         
-        # Parse the generated recipe
+        # Parse with IMPROVED VALIDATION
         title = "AI Generated Recipe"
         ingredients_list = []
         instructions = ""
         
-        # Extract title
-        title_match = re.search(r'TITLE:\s*(.+?)(?:\||$)', recipe_text)
+        # Extract title (with cleanup)
+        title_match = re.search(r'TITLE:\s*(.+?)(?:\||INGREDIENTS:|$)', recipe_text, re.IGNORECASE)
         if title_match:
             title = title_match.group(1).strip()
+            # Clean up title
+            title = re.sub(r'\s+', ' ', title)  # Remove extra whitespace
+            title = title[:100]  # Limit length
         
-        # Extract ingredients
-        ingredients_match = re.search(r'INGREDIENTS:\s*(.+?)(?:\|INSTRUCTIONS:|$)', recipe_text, re.DOTALL)
+        # Extract ingredients (FIXED: Better parsing to avoid instructions bleeding in)
+        ingredients_match = re.search(r'INGREDIENTS?:\s*(.+?)(?:INSTRUCTIONS?:|$)', recipe_text, re.DOTALL | re.IGNORECASE)
         if ingredients_match:
             ing_text = ingredients_match.group(1).strip()
-            ingredients_list = [i.strip() for i in ing_text.split(';') if i.strip()]
+            
+            # VALIDATION: Remove anything that looks like instructions
+            ing_lines = ing_text.split('\n')
+            for line in ing_lines:
+                line = line.strip()
+                # Skip if it looks like instructions (contains action verbs)
+                if any(word in line.lower() for word in ['cook', 'heat', 'add the', 'boil', 'fry', 'bake', 'mix', 'combine', 'stir']):
+                    continue
+                # Skip if it has pipe character or "INSTRUCTIONS" text
+                if '|' in line or 'INSTRUCTION' in line.upper():
+                    continue
+                # Split by semicolon or newline
+                if ';' in line:
+                    ingredients_list.extend([i.strip() for i in line.split(';') if i.strip()])
+                elif line:
+                    ingredients_list.append(line)
+            
+            # Clean up ingredients
+            ingredients_list = [i for i in ingredients_list if i and len(i) > 2 and len(i) < 100]
         
-        # Extract instructions
-        instructions_match = re.search(r'INSTRUCTIONS:\s*(.+?)$', recipe_text, re.DOTALL)
+        # Extract instructions (with repetition detection)
+        instructions_match = re.search(r'INSTRUCTIONS?:\s*(.+?)$', recipe_text, re.DOTALL | re.IGNORECASE)
         if instructions_match:
             instructions = instructions_match.group(1).strip()
+            
+            # VALIDATION: Remove excessive repetition
+            instructions = self._remove_repetition(instructions)
+            
+            # Clean up formatting
+            instructions = re.sub(r'\n\s*\n', '\n', instructions)  # Remove blank lines
+            instructions = re.sub(r'\s+', ' ', instructions)  # Normalize whitespace
+            instructions = instructions[:800]  # Limit length
         
         return {
             'title': title,
             'ingredients': ingredients_list,
             'instructions': instructions
         }
+    
+    def _remove_repetition(self, text: str) -> str:
+        """Remove excessive repetition from instructions"""
+        sentences = text.split('.')
+        seen = set()
+        cleaned = []
+        
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            
+            # Normalize for comparison (lowercase, remove numbers/measurements)
+            normalized = re.sub(r'\d+', '', sentence.lower())
+            normalized = re.sub(r'\s+', ' ', normalized).strip()
+            
+            # If we've seen this sentence (or very similar), skip it
+            if normalized in seen:
+                continue
+            
+            # Check for substring repetition (e.g., same phrase 3+ times)
+            if len(normalized) > 20:
+                # If a 10+ char phrase appears 3+ times, it's repetitive
+                words = normalized.split()
+                if len(words) > 3:
+                    phrase = ' '.join(words[-4:])  # Last 4 words
+                    if text.lower().count(phrase) >= 3:
+                        continue
+            
+            seen.add(normalized)
+            cleaned.append(sentence)
+        
+        return '. '.join(cleaned) + '.'
     
     def generate(self, request: RecipeRequest) -> RecipeResponse:
         print(f"DEBUG: Recipe Generation - Use ML? {self.use_ml}")
