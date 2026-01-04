@@ -60,6 +60,8 @@ class DietService:
                     _, idxs = clf.kneighbors(input_df)
                     votes = self.data.iloc[idxs[0]]['Diet_Recommendation'].mode()
                     diet_strategy = votes[0] if not votes.empty else "Balanced"
+                    print(f"DEBUG: User Profile -> Age: {request.userProfile.age}, W: {request.userProfile.weightKg}")
+                    print(f"DEBUG: ML Predicted Strategy (KNN): {diet_strategy}")
             except Exception as e:
                 print(f"ML Error: {e}")
 

@@ -84,6 +84,7 @@ class RecipeService:
         }
     
     def generate(self, request: RecipeRequest) -> RecipeResponse:
+        print(f"DEBUG: Recipe Generation - Use ML? {self.use_ml}")
         if self.use_ml:
             # Use trained ML model
             try:

@@ -1,8 +1,56 @@
-from app.models import UserProfile, MealPlanResponse
-from app.utils.data_consts import MEAL_OPTIONS
+from app.models import UserProfile, MealPlanResponse, RecipeRequest, Meal
+from app.services.recipe_service import RecipeService
+import pandas as pd
+import pickle
+import os
 import random
 
 class MealPlanService:
+    def __init__(self):
+        self.recipe_service = RecipeService()
+        self.model_path = "app/models/diet_model.pkl"
+        self.data_path = "data/diet_recommendations/diet_recommendations_dataset.csv"
+        self.model = None
+        self.data = None
+        self._load_model()
+
+    def _load_model(self):
+        try:
+            if os.path.exists(self.model_path) and os.path.exists(self.data_path):
+                with open(self.model_path, 'rb') as f:
+                    self.model = pickle.load(f)
+                self.data = pd.read_csv(self.data_path)
+                print("✅ MealPlanService: ML Model Loaded.")
+        except Exception as e:
+            print(f"⚠️ MealPlanService ML Load Error: {e}")
+
+    def _predict_strategy(self, profile: UserProfile) -> str:
+        if not self.model: return "Balanced"
+        
+        try:
+            # Unpack Model
+            clf = self.model['model'] if isinstance(self.model, dict) else self.model
+            feats = self.model['features'] if isinstance(self.model, dict) else ['Age', 'Weight_kg', 'Height_cm', 'BMI']
+            
+            # Prepare Vector
+            vals = {
+                'Age': profile.age,
+                'Weight_kg': profile.weightKg,
+                'Height_cm': profile.heightCm,
+                'BMI': profile.weightKg / ((profile.heightCm/100)**2)
+            }
+            
+            if all(f in vals for f in feats):
+                vec = [vals[f] for f in feats]
+                input_df = pd.DataFrame([vec], columns=feats)
+                _, idxs = clf.kneighbors(input_df)
+                votes = self.data.iloc[idxs[0]]['Diet_Recommendation'].mode()
+                return votes[0] if not votes.empty else "Balanced"
+        except Exception as e:
+            print(f"Prediction Error: {e}")
+        
+        return "Balanced"
+
     def _calculate_bmr(self, profile: UserProfile) -> float:
         # Standard Mifflin-St Jeor
         s = 5 if profile.gender.lower() == "male" else -161
@@ -17,42 +65,48 @@ class MealPlanService:
         return (bmr * factor) + adj
 
     def create_plan(self, profile: UserProfile) -> MealPlanResponse:
-        target = self._calculate_bmr(profile)
+        target_calories = self._calculate_bmr(profile)
+        strategy = self._predict_strategy(profile)
         
-        # Dynamic Selection (Simple Knapsack-ish)
-        selected = []
+        print(f"DEBUG: Generating Plan for {profile.age}yo, Goal: {profile.healthGoals}")
+        print(f"DEBUG: Predicted Strategy: {strategy}")
+        
+        meals = []
         current_cal = 0
-        attempts = 0
         
-        # Shuffle to ensure variety every request
-        pool = MEAL_OPTIONS.copy()
+        # Define ratios for meals
+        structure = [
+            ("Breakfast", 0.25, ["Oats", "Eggs", "Yogurt", "Berries"]),
+            ("Lunch", 0.35, ["Chicken", "Rice", "Quinoa", "Salad"]),
+            ("Snack", 0.10, ["Nuts", "Fruit", "Smoothie"]),
+            ("Dinner", 0.30, ["Fish", "Steak", "Tofu", "Vegetables"])
+        ]
         
-        # Logic: 1 Bf, 1 Lun, 1 Din, rest Snacks
-        valid_types = ["Breakfast", "Lunch", "Dinner"]
-        random.shuffle(pool)
-        
-        # 1. Fill Main Meals first
-        for m_type in valid_types:
-            options = [m for m in pool if m.type == m_type]
-            if options:
-                choice = random.choice(options)
-                selected.append(choice)
-                current_cal += choice.calories
-                
-        # 2. Fill Remainder with Snacks/Sides
-        while current_cal < target - 100 and attempts < 20:
-            options = [m for m in pool if m.type == "Snack" or m.calories < 300]
-            if not options: break
+        for m_type, ratio, base_ings in structure:
+            meal_target = int(target_calories * ratio)
             
-            choice = random.choice(options)
-            if choice not in selected: # Allow simple duplicate check
-                selected.append(choice)
-                current_cal += choice.calories
-            attempts += 1
+            # Generate a recipe using the ML strategy
+            ings = ", ".join(random.sample(base_ings, 2))
             
+            # Use RecipeService to generate content (uses GPT-2 if avail)
+            recipe_req = RecipeRequest(
+                ingredients=ings, 
+                cuisine=strategy, 
+                dietaryRestrictions=strategy
+            )
+            gen_recipe = self.recipe_service.generate(recipe_req)
+            
+            meals.append(Meal(
+                name=gen_recipe.title,
+                type=m_type,
+                calories=meal_target,
+                macros=f"{strategy} Optimized" 
+            ))
+            current_cal += meal_target
+
         return MealPlanResponse(
             goal=profile.healthGoals,
-            totalDailyCalories=int(target),
-            suggestion=f"Target: {int(target)} kcal. Generated Plan: {current_cal} kcal.",
-            meals=selected
+            totalDailyCalories=int(target_calories),
+            suggestion=f"AI Recommendation: {strategy} Diet. ({int(target_calories)} kcal)",
+            meals=meals
         )
