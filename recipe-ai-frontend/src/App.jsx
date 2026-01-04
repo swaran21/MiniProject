@@ -4,51 +4,81 @@ import HealthProfileComponent from "./components/HealthProfileComponent";
 import RecipeComponent from "./components/RecipeComponent";
 import MealPlanComponent from "./components/MealPlanComponent";
 import DietTrackerComponent from "./components/DietTrackerComponent";
+import LoginComponent from "./components/LoginComponent";
 import "./App.css";
 
-// Default Profile
-const DEFAULT_PROFILE = {
-  weightKg: "",
-  heightCm: "",
-  age: "",
-  gender: "M",
-  activityLevel: "Moderate",
-  healthGoals: "Balanced",
-  dietaryRestrictions: "None"
-};
-
 function App() {
-  const [activeTab, setActiveTab] = useState("health");
+  // --- Global Auth State ---
+  const [user, setUser] = useState(null);
+  const [activeTab, setActiveTab] = useState("diet");
 
-  // Load from LocalStorage
-  const [userProfile, setUserProfile] = useState(() => {
-    const saved = localStorage.getItem("userProfile");
-    return saved ? JSON.parse(saved) : DEFAULT_PROFILE;
-  });
-
-  // Save to LocalStorage
-  const handleProfileUpdate = (newProfile) => {
-    setUserProfile(newProfile);
-    localStorage.setItem("userProfile", JSON.stringify(newProfile));
+  const handleLoginSuccess = (userData) => {
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
   };
 
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem("user");
+  };
+
+  // Check localStorage on mount
+  React.useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  // If not logged in, show login screen
+  if (!user) {
+    return <LoginComponent onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // Main App (User is logged in)
   return (
     <div className="App">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       
+      {/* User Info Bar */}
+      <div style={{ 
+        background: "#667eea", 
+        color: "white", 
+        padding: "10px 20px", 
+        display: "flex", 
+        justifyContent: "space-between",
+        alignItems: "center"
+      }}>
+        <span>👤 Welcome, <strong>{user.username}</strong></span>
+        <button 
+          onClick={handleLogout}
+          style={{
+            background: "white",
+            color: "#667eea",
+            border: "none",
+            padding: "5px 15px",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+        >
+          Logout
+        </button>
+      </div>
+
       <main className="main-content">
         {activeTab === "health" && (
           <HealthProfileComponent 
-            userProfile={userProfile} 
-            onUpdateProfile={handleProfileUpdate} 
+            userProfile={user} 
+            onUpdateProfile={(updated) => setUser({...user, ...updated})} 
           />
         )}
         {activeTab === "diet" && (
-          <DietTrackerComponent userProfile={userProfile} />
+          <DietTrackerComponent user={user} />
         )}
-        {activeTab === "recipe" && <RecipeComponent />}
+        {activeTab === "recipe" && <RecipeComponent user={user} />}
         {activeTab === "mealplan" && (
-          <MealPlanComponent userProfile={userProfile} />
+          <MealPlanComponent user={user} />
         )}
       </main>
     </div>

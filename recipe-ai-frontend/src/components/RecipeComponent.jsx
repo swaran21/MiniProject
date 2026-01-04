@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function RecipeComponent() {
+function RecipeComponent({ user }) {
   const [ingredients, setIngredients] = useState("");
   const [cuisine, setCuisine] = useState("");
   const [recipe, setRecipe] = useState(null);
@@ -14,11 +14,15 @@ function RecipeComponent() {
     setRecipe(null);
     
     try {
-      // Build query string
       const params = new URLSearchParams({
         ingredients: ingredients,
         cuisine: cuisine || "any",
       });
+      
+      // Add userId if user is logged in
+      if (user && user.id) {
+        params.append("userId", user.id);
+      }
 
       const response = await fetch(`${API_BASE_URL}/api/recipes/generate?${params}`);
       const data = await response.json();
@@ -33,6 +37,11 @@ function RecipeComponent() {
   return (
     <div className="component-card">
       <h2>🍳 AI Recipe Generator</h2>
+      {user && user.dietaryRestrictions && (
+        <p style={{ background: "#e3f2fd", padding: "10px", borderRadius: "5px", marginBottom: "15px" }}>
+          Recipes will be tailored to your dietary preference: <strong>{user.dietaryRestrictions}</strong>
+        </p>
+      )}
       <form onSubmit={generateRecipe}>
         <div className="form-group">
           <label>Ingredients (comma separated)</label>
@@ -48,34 +57,35 @@ function RecipeComponent() {
           <label>Cuisine Preference (Optional)</label>
           <input 
             type="text" 
-            placeholder="e.g. Italian, Mexican" 
+            placeholder="e.g. Italian, Mexican, Indian"
             value={cuisine}
             onChange={(e) => setCuisine(e.target.value)}
           />
         </div>
         <button type="submit" className="action-button full-width" disabled={loading}>
-          {loading ? "Cooking up magic..." : "Generate Recipe"}
+          {loading ? "Generating..." : "Generate Recipe"}
         </button>
       </form>
 
       {recipe && (
-        <div className="recipe-card">
-          <img src={recipe.imageUrl} alt="Dish" className="recipe-image"/>
+        <div className="result-card">
           <h3>{recipe.title}</h3>
-          <div className="tags">
+          <div className="recipe-details">
             <span className="tag cuisine">{recipe.cuisineType}</span>
-            <span className="tag calories">{recipe.calories} kcal</span>
+            <span className="tag calories">{recipe.calories} cal</span>
           </div>
-          
-          <h4>Ingredients:</h4>
-          <ul>
-            {recipe.ingredients.map((ing, index) => (
-              <li key={index}>{ing}</li>
-            ))}
-          </ul>
-
-          <h4>Instructions:</h4>
-          <p className="instructions">{recipe.instructions}</p>
+          <div className="ingredients-list">
+            <strong>Ingredients:</strong>
+            <ul>
+              {recipe.ingredients.map((ing, idx) => (
+                <li key={idx}>{ing}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="instructions">
+            <strong>Instructions:</strong>
+            <p>{recipe.instructions}</p>
+          </div>
         </div>
       )}
     </div>

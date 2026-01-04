@@ -1,31 +1,13 @@
 import React, { useState } from "react";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API_BASE_URL = "http://localhost:8080";
 
-function DietTrackerComponent({ userProfile }) {
-  // 1. Profile Data State (Pre-filled from persistent profile)
-  const [profileData, setProfileData] = useState(userProfile || {
-    weightKg: "",
-    heightCm: "",
-    age: "",
-    gender: "M",
-    activityLevel: "Moderate",
-    healthGoals: "Balanced",
-    dietaryRestrictions: "None"
-  });
-
-  // 2. Meal Entry State
+function DietTrackerComponent({ user }) {
   const [foodItem, setFoodItem] = useState("");
   const [mealType, setMealType] = useState("Lunch");
-  
-  // 3. UI States
   const [recommendation, setRecommendation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const handleProfileChange = (e) => {
-    setProfileData({ ...profileData, [e.target.name]: e.target.value });
-  };
 
   const getAdvice = async (e) => {
     e.preventDefault();
@@ -33,38 +15,26 @@ function DietTrackerComponent({ userProfile }) {
     setRecommendation(null);
     setError("");
 
-    // Prepare the payload exactly as the Java Backend expects
     const payload = {
       foodItem: foodItem,
       mealType: mealType,
-      userProfile: {
-        weightKg: parseFloat(profileData.weightKg) || 70, // Default if empty
-        heightCm: parseFloat(profileData.heightCm) || 170,
-        age: parseInt(profileData.age) || 25,
-        gender: profileData.gender,
-        activityLevel: profileData.activityLevel,
-        healthGoals: profileData.healthGoals,
-        dietaryRestrictions: profileData.dietaryRestrictions
-      }
+      userProfile: null
     };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/diet/recommend`, {
+      const response = await fetch(`${API_BASE_URL}/api/diet/recommend?userId=${user.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to get advice from server.");
-      }
-
+      if (!response.ok) throw new Error("Failed to get advice");
       const data = await response.json();
-      console.log("API Response:", data); // Debugging
+      console.log("API Response:", data);
       setRecommendation(data);
     } catch (err) {
-      console.error("Error:", err);
-      setError("Could not connect to the Smart Diet System.");
+      console.error(err);
+      setError("System Error. Ensure Java Backend (8080) & Python ML (5000) are running.");
     } finally {
       setLoading(false);
     }
@@ -74,45 +44,22 @@ function DietTrackerComponent({ userProfile }) {
     <div className="component-card">
       <h2>🍽️ Smart Diet Tracker</h2>
       <p style={{ color: "#666", marginBottom: "20px" }}>
-        Tell us what you ate, and we'll calculate your next move.
+        Log your meals and get AI-powered recommendations for the rest of your day.
       </p>
 
-      <form onSubmit={getAdvice}>
-        {/* Context Section: User Profile (Simplified for this view) */}
-        <div style={{ background: "#f8f9fa", padding: "15px", borderRadius: "8px", marginBottom: "20px" }}>
-          <h4 style={{ margin: "0 0 10px 0", color: "#444" }}>Step 1: Your Context</h4>
-          <div className="grid-form">
-            <div className="form-group">
-              <label>Weight (kg)</label>
-              <input 
-                type="number" 
-                name="weightKg" 
-                value={profileData.weightKg} 
-                onChange={handleProfileChange} 
-                placeholder="e.g., 75" 
-                required 
-              />
-            </div>
-            <div className="form-group">
-              <label>Current Goal</label>
-              <select name="healthGoals" value={profileData.healthGoals} onChange={handleProfileChange}>
-                <option value="Balanced">Balanced Diet</option>
-                <option value="Lose Weight">Lose Weight</option>
-                <option value="Gain Muscle">Gain Muscle</option>
-              </select>
-            </div>
-          </div>
-        </div>
+      <div style={{ background: "#e3f2fd", padding: "15px", borderRadius: "8px", marginBottom: "20px" }}>
+        <strong>Your Profile:</strong> {user.age || "N/A"} yrs, {user.weightKg || "N/A"}kg, Goal: {user.healthGoals || "Balanced"}
+      </div>
 
-        {/* Input Section: The Meal */}
-        <h4 style={{ margin: "0 0 10px 0", color: "#444" }}>Step 2: The Meal</h4>
+      <form onSubmit={getAdvice}>
+        <h4 style={{ margin: "0 0 10px 0", color: "#444" }}>Log Your Meal</h4>
         <div className="form-group">
           <label>What did you just eat?</label>
           <input 
             type="text" 
             value={foodItem} 
             onChange={(e) => setFoodItem(e.target.value)} 
-            placeholder="e.g., Cheese Pizza, Grilled Chicken Salad" 
+            placeholder="e.g., Cheese Pizza" 
             required 
             style={{ padding: "12px", fontSize: "1.1rem" }}
           />
@@ -129,13 +76,12 @@ function DietTrackerComponent({ userProfile }) {
         </div>
 
         <button type="submit" className="action-button full-width" disabled={loading}>
-          {loading ? "Analyzing Meal..." : "Get Smart Recommendation"}
+          {loading ? "Analyzing..." : "Get Smart Recommendation"}
         </button>
       </form>
 
       {error && <p className="error-message">{error}</p>}
 
-{/* Results Section */}
       {recommendation && (
         <div className="result-card" style={{ display: "block", marginTop: "25px", borderLeft: "5px solid #4CAF50" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px" }}>
@@ -155,26 +101,26 @@ function DietTrackerComponent({ userProfile }) {
           <h4 style={{ color: "#2E7D32", margin: "0 0 15px 0" }}>Your Full Day Plan:</h4>
           
           {recommendation.dayPlan && recommendation.dayPlan.length > 0 ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+            <div style={{ display: "grid", gap: "15px" }}>
               {recommendation.dayPlan.map((meal, idx) => {
                 let cardColor = "#fff";
                 let borderColor = "#ccc";
                 let icon = "🍽️";
 
                 if (meal.type.includes("Breakfast")) {
-                  cardColor = "#FFF3E0"; // Warm Orange
+                  cardColor = "#FFF3E0";
                   borderColor = "#FF9800";
                   icon = "🌅";
                 } else if (meal.type.includes("Lunch")) {
-                  cardColor = "#E8F5E9"; // Fresh Green
+                  cardColor = "#E8F5E9";
                   borderColor = "#4CAF50";
                   icon = "🥗";
                 } else if (meal.type.includes("Dinner")) {
-                  cardColor = "#E3F2FD"; // Calm Blue
+                  cardColor = "#E3F2FD";
                   borderColor = "#2196F3";
                   icon = "🌙";
                 } else {
-                  cardColor = "#FCE4EC"; // Pink Snack
+                  cardColor = "#FCE4EC";
                   borderColor = "#E91E63";
                   icon = "🍎";
                 }
@@ -203,7 +149,6 @@ function DietTrackerComponent({ userProfile }) {
               })}
             </div>
           ) : (
-
              <div style={{ background: "#fff", borderLeft: "5px solid #607D8B", padding: "15px", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
               <div style={{ display: "flex", alignItems: "center", marginBottom: "5px" }}>
                  <h5 style={{ margin: 0, fontSize: "1.1rem", color: "#333" }}>💡 Recommendation</h5>
