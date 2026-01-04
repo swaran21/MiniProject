@@ -69,8 +69,12 @@ function App() {
       <main className="main-content">
         {activeTab === "health" && (
           <HealthProfileComponent 
-            userProfile={user} 
-            onUpdateProfile={(updated) => setUser({...user, ...updated})} 
+            user={user} 
+            onUpdateProfile={(updated) => {
+              const updatedUser = {...user, ...updated};
+              setUser(updatedUser);
+              localStorage.setItem("user", JSON.stringify(updatedUser));
+            }} 
           />
         )}
         {activeTab === "diet" && (
