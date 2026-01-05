@@ -106,10 +106,11 @@ function MealPlanComponent({ user }) {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    userSelect: "none"
+                    userSelect: "none",
+                    color: "#333"  // Dark text for visibility
                   }}>
-                    <span>
-                      {getMealIcon(meal.type)} {meal.type}: <strong>{meal.name}</strong>
+                    <span style={{ color: "#333" }}>
+                      {getMealIcon(meal.type)} <strong>{meal.type}:</strong> {meal.name || "AI Generated Meal"}
                     </span>
                     <span style={{ 
                       background: "#667eea",
@@ -138,11 +139,12 @@ function MealPlanComponent({ user }) {
                       <ul style={{ 
                         margin: 0,
                         paddingLeft: "20px",
-                        lineHeight: "1.8"
+                        lineHeight: "1.8",
+                        color: "#333"  // Dark text for ingredients
                       }}>
                         {meal.ingredients?.map((ing, i) => (
-                          <li key={i} style={{ marginBottom: "5px" }}>{ing}</li>
-                        )) || <li>No ingredients available</li>}
+                          <li key={i} style={{ marginBottom: "5px", color: "#333" }}>{ing}</li>
+                        )) || <li style={{ color: "#666" }}>No ingredients available</li>}
                       </ul>
                     </div>
 
@@ -160,7 +162,7 @@ function MealPlanComponent({ user }) {
                       <p style={{ 
                         margin: 0,
                         lineHeight: "1.8",
-                        color: "#555",
+                        color: "#333",  // Dark text for instructions
                         whiteSpace: "pre-wrap"
                       }}>
                         {meal.instructions || "No instructions available"}
