@@ -84,51 +84,61 @@ function MealPlanComponent({ user }) {
               </p>
             </div>
 
-            <h4 style={{ marginBottom: "15px" }}>📋 Your Meals ({mealPlan.meals.length})</h4>
+            <h4 style={{ marginBottom: "15px", color: "#333" }}>📋 Your Meals ({mealPlan.meals.length})</h4>
             <div>
-              {mealPlan.meals.map((meal, idx) => (
-                <details 
-                  key={idx} 
-                  style={{ 
-                    marginBottom: "15px",
-                    border: "1px solid #e0e0e0",
-                    borderLeft: "4px solid #667eea",
-                    borderRadius: "6px",
-                    overflow: "hidden"
-                  }}
-                >
-                  <summary style={{ 
-                    padding: "15px",
-                    cursor: "pointer",
-                    background: "#f8f9fa",
-                    fontWeight: "500",
-                    fontSize: "16px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    userSelect: "none",
-                    color: "#333"  // Dark text for visibility
-                  }}>
-                    <span style={{ color: "#333" }}>
-                      {getMealIcon(meal.type)} <strong>{meal.type}:</strong> {meal.name || "AI Generated Meal"}
-                    </span>
-                    <span style={{ 
-                      background: "#667eea",
-                      color: "white",
-                      padding: "4px 12px",
-                      borderRadius: "20px",
-                      fontSize: "13px",
-                      marginLeft: "10px"
+              {mealPlan.meals.map((meal, idx) => {
+                // Color coding based on meal type (same as diet tracker)
+                let borderColor = "#667eea";
+                if (meal.type === "Breakfast") borderColor = "#FF9800";
+                else if (meal.type === "Lunch") borderColor = "#4CAF50";
+                else if (meal.type === "Dinner") borderColor = "#2196F3";
+                else if (meal.type === "Snack") borderColor = "#E91E63";
+
+                return (
+                  <details 
+                    key={idx} 
+                    style={{ 
+                      marginBottom: "15px",
+                      border: "1px solid #e0e0e0",
+                      borderLeft: `5px solid ${borderColor}`,
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+                    }}
+                  >
+                    <summary style={{ 
+                      padding: "15px",
+                      cursor: "pointer",
+                      background: "#f8f9fa",
+                      fontWeight: "500",
+                      fontSize: "16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      userSelect: "none",
+                      color: "#333"
                     }}>
-                      {meal.calories} kcal
-                    </span>
-                  </summary>
+                      <span style={{ color: "#333" }}>
+                        {getMealIcon(meal.type)} <strong>{meal.type}:</strong> {meal.name || "AI Generated Meal"}
+                      </span>
+                      <span style={{ 
+                        background: borderColor,
+                        color: "white",
+                        padding: "4px 12px",
+                        borderRadius: "20px",
+                        fontSize: "13px",
+                        marginLeft: "10px",
+                        fontWeight: "bold"
+                      }}>
+                        {meal.calories} kcal
+                      </span>
+                    </summary>
                   
                   <div style={{ padding: "20px", background: "white" }}>
                     {/* Ingredients Section */}
                     <div style={{ marginBottom: "20px" }}>
                       <h5 style={{ 
-                        color: "#667eea", 
+                        color: borderColor,  // Use meal-specific color
                         marginBottom: "10px",
                         fontSize: "14px",
                         textTransform: "uppercase",
@@ -140,7 +150,7 @@ function MealPlanComponent({ user }) {
                         margin: 0,
                         paddingLeft: "20px",
                         lineHeight: "1.8",
-                        color: "#333"  // Dark text for ingredients
+                        color: "#333"
                       }}>
                         {meal.ingredients?.map((ing, i) => (
                           <li key={i} style={{ marginBottom: "5px", color: "#333" }}>{ing}</li>
@@ -151,7 +161,7 @@ function MealPlanComponent({ user }) {
                     {/* Instructions Section */}
                     <div>
                       <h5 style={{ 
-                        color: "#667eea", 
+                        color: borderColor,  // Use meal-specific color
                         marginBottom: "10px",
                         fontSize: "14px",
                         textTransform: "uppercase",
@@ -162,7 +172,7 @@ function MealPlanComponent({ user }) {
                       <p style={{ 
                         margin: 0,
                         lineHeight: "1.8",
-                        color: "#333",  // Dark text for instructions
+                        color: "#333",
                         whiteSpace: "pre-wrap"
                       }}>
                         {meal.instructions || "No instructions available"}
@@ -176,16 +186,17 @@ function MealPlanComponent({ user }) {
                         padding: "12px",
                         background: "#f8f9fa",
                         borderRadius: "6px",
-                        fontSize: "13px"
+                        fontSize: "13px",
+                        color: "#666"
                       }}>
                         <strong>Nutrition:</strong> {meal.macros}
                       </div>
                     )}
                   </div>
                 </details>
-              ))}
+              );
+            })}
             </div>
-
             <div style={{ 
               marginTop: "20px",
               padding: "15px",
