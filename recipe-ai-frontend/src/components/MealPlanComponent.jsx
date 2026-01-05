@@ -194,10 +194,9 @@ function MealPlanComponent({ user }) {
               <strong>💡 Tip:</strong> Click on any meal above to see the full recipe with ingredients and cooking instructions!
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default MealPlanComponent;
+        )}
+      </div>
+    );
+  }
+  
+  export default MealPlanComponent;
