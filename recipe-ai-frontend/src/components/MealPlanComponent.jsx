@@ -34,6 +34,17 @@ function MealPlanComponent({ user }) {
     }
   };
 
+  // Helper function for meal type icons
+  const getMealIcon = (type) => {
+    const icons = {
+      'Breakfast': '🌅',
+      'Lunch': '🌞',
+      'Dinner': '🌙',
+      'Snack': '🍪'
+    };
+    return icons[type] || '🍽️';
+  };
+
   return (
     <div className="component-card">
       <h2>📅 AI Meal Planner</h2>
@@ -55,29 +66,133 @@ function MealPlanComponent({ user }) {
 
       {error && <p className="error-message">{error}</p>}
 
-      {mealPlan && (
-        <div className="result-card" style={{ marginTop: "25px" }}>
-          <h3>{mealPlan.goal}</h3>
-          <p><strong>Total Daily Calories:</strong> {mealPlan.totalDailyCalories} kcal</p>
-          <p>{mealPlan.suggestion}</p>
+        {mealPlan && (
+          <div className="result-card">
+            <h3>🍽️ Your Personalized Meal Plan</h3>
+            <div style={{ 
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              padding: "15px",
+              borderRadius: "8px",
+              color: "white",
+              marginBottom: "20px"
+            }}>
+              <p style={{ margin: "0 0 5px 0", fontSize: "16px" }}>
+                <strong>Daily Target:</strong> {mealPlan.totalDailyCalories} kcal
+              </p>
+              <p style={{ margin: 0, opacity: 0.9, fontSize: "14px" }}>
+                Goal: {mealPlan.goal}
+              </p>
+            </div>
 
-          <div style={{ marginTop: "20px" }}>
-            <h4>Your Meals:</h4>
-            {mealPlan.meals.map((meal, idx) => (
-              <div key={idx} style={{ 
-                background: "#f8f9fa", 
-                padding: "15px", 
-                borderRadius: "8px", 
-                marginBottom: "10px",
-                borderLeft: "4px solid #667eea"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h5 style={{ margin: 0 }}>{meal.name} ({meal.type})</h5>
-                  <span style={{ fontWeight: "bold", color: "#667eea" }}>{meal.calories} kcal</span>
-                </div>
-                <p style={{ margin: "5px 0 0 0", fontSize: "0.9rem", color: "#666" }}>{meal.macros}</p>
-              </div>
-            ))}
+            <h4 style={{ marginBottom: "15px" }}>📋 Your Meals ({mealPlan.meals.length})</h4>
+            <div>
+              {mealPlan.meals.map((meal, idx) => (
+                <details 
+                  key={idx} 
+                  style={{ 
+                    marginBottom: "15px",
+                    border: "1px solid #e0e0e0",
+                    borderLeft: "4px solid #667eea",
+                    borderRadius: "6px",
+                    overflow: "hidden"
+                  }}
+                >
+                  <summary style={{ 
+                    padding: "15px",
+                    cursor: "pointer",
+                    background: "#f8f9fa",
+                    fontWeight: "500",
+                    fontSize: "16px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    userSelect: "none"
+                  }}>
+                    <span>
+                      {getMealIcon(meal.type)} {meal.type}: <strong>{meal.name}</strong>
+                    </span>
+                    <span style={{ 
+                      background: "#667eea",
+                      color: "white",
+                      padding: "4px 12px",
+                      borderRadius: "20px",
+                      fontSize: "13px",
+                      marginLeft: "10px"
+                    }}>
+                      {meal.calories} kcal
+                    </span>
+                  </summary>
+                  
+                  <div style={{ padding: "20px", background: "white" }}>
+                    {/* Ingredients Section */}
+                    <div style={{ marginBottom: "20px" }}>
+                      <h5 style={{ 
+                        color: "#667eea", 
+                        marginBottom: "10px",
+                        fontSize: "14px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px"
+                      }}>
+                        🥘 Ingredients
+                      </h5>
+                      <ul style={{ 
+                        margin: 0,
+                        paddingLeft: "20px",
+                        lineHeight: "1.8"
+                      }}>
+                        {meal.ingredients?.map((ing, i) => (
+                          <li key={i} style={{ marginBottom: "5px" }}>{ing}</li>
+                        )) || <li>No ingredients available</li>}
+                      </ul>
+                    </div>
+
+                    {/* Instructions Section */}
+                    <div>
+                      <h5 style={{ 
+                        color: "#667eea", 
+                        marginBottom: "10px",
+                        fontSize: "14px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px"
+                      }}>
+                        📝 Instructions
+                      </h5>
+                      <p style={{ 
+                        margin: 0,
+                        lineHeight: "1.8",
+                        color: "#555",
+                        whiteSpace: "pre-wrap"
+                      }}>
+                        {meal.instructions || "No instructions available"}
+                      </p>
+                    </div>
+
+                    {/* Nutrition Info */}
+                    {meal.macros && (
+                      <div style={{
+                        marginTop: "20px",
+                        padding: "12px",
+                        background: "#f8f9fa",
+                        borderRadius: "6px",
+                        fontSize: "13px"
+                      }}>
+                        <strong>Nutrition:</strong> {meal.macros}
+                      </div>
+                    )}
+                  </div>
+                </details>
+              ))}
+            </div>
+
+            <div style={{ 
+              marginTop: "20px",
+              padding: "15px",
+              background: "#e3f2fd",
+              borderRadius: "8px",
+              fontSize: "14px"
+            }}>
+              <strong>💡 Tip:</strong> Click on any meal above to see the full recipe with ingredients and cooking instructions!
+            </div>
           </div>
         </div>
       )}
