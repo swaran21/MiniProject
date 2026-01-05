@@ -102,7 +102,9 @@ class MealPlanService:
                 name=gen_recipe.title,
                 type=m_type,
                 calories=gen_recipe.calories,  # ← Real calories from NutritionService!
-                macros=f"{strategy} Optimized ({gen_recipe.calories} kcal)" 
+                macros=f"{strategy} Optimized ({gen_recipe.calories} kcal)",
+                ingredients=gen_recipe.ingredients,  # ← Add ingredients from AI
+                instructions=gen_recipe.instructions  # ← Add instructions from AI
             ))
             current_cal += gen_recipe.calories
 

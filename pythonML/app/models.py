@@ -37,6 +37,8 @@ class Meal(BaseModel):
     type: str       # Breakfast, Lunch, Dinner, Snack
     calories: int
     macros: str     # e.g., "P: 20g, C: 40g, F: 10g"
+    ingredients: List[str] = []  # Add ingredients list
+    instructions: str = ""  # Add cooking instructions
 
 class MealPlanResponse(BaseModel):
     goal: str
