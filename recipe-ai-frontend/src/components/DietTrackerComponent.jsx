@@ -103,48 +103,118 @@ function DietTrackerComponent({ user }) {
           {recommendation.dayPlan && recommendation.dayPlan.length > 0 ? (
             <div style={{ display: "grid", gap: "15px" }}>
               {recommendation.dayPlan.map((meal, idx) => {
-                let cardColor = "#fff";
                 let borderColor = "#ccc";
                 let icon = "🍽️";
 
                 if (meal.type.includes("Breakfast")) {
-                  cardColor = "#FFF3E0";
                   borderColor = "#FF9800";
                   icon = "🌅";
                 } else if (meal.type.includes("Lunch")) {
-                  cardColor = "#E8F5E9";
                   borderColor = "#4CAF50";
                   icon = "🥗";
                 } else if (meal.type.includes("Dinner")) {
-                  cardColor = "#E3F2FD";
                   borderColor = "#2196F3";
                   icon = "🌙";
                 } else {
-                  cardColor = "#FCE4EC";
                   borderColor = "#E91E63";
                   icon = "🍎";
                 }
 
                 return (
-                  <div key={idx} style={{ 
-                    background: cardColor, 
-                    borderLeft: `5px solid ${borderColor}`, 
-                    padding: "15px", 
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "5px" }}>
-                      <h5 style={{ margin: 0, fontSize: "1.1rem", color: "#333" }}>{icon} {meal.type}</h5>
-                      <span style={{ fontWeight: "bold", color: borderColor }}>{meal.recipe.calories} kcal</span>
+                  <details 
+                    key={idx} 
+                    style={{ 
+                      border: "1px solid #e0e0e0",
+                      borderLeft: `5px solid ${borderColor}`,
+                      borderRadius: "8px",
+                      overflow: "hidden"
+                    }}
+                  >
+                    <summary style={{ 
+                      padding: "15px",
+                      cursor: "pointer",
+                      background: "#f8f9fa",
+                      fontWeight: "500",
+                      fontSize: "16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      userSelect: "none",
+                      color: "#333"
+                    }}>
+                      <span>
+                        {icon} <strong>{meal.type}:</strong> {meal.recipe.title}
+                      </span>
+                      <span style={{ 
+                        background: borderColor,
+                        color: "white",
+                        padding: "4px 12px",
+                        borderRadius: "20px",
+                        fontSize: "13px",
+                        marginLeft: "10px"
+                      }}>
+                        {meal.recipe.calories} kcal
+                      </span>
+                    </summary>
+                    
+                    <div style={{ padding: "20px", background: "white" }}>
+                      {/* Ingredients Section */}
+                      <div style={{ marginBottom: "20px" }}>
+                        <h5 style={{ 
+                          color: borderColor, 
+                          marginBottom: "10px",
+                          fontSize: "14px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px"
+                        }}>
+                          🥘 Ingredients
+                        </h5>
+                        <ul style={{ 
+                          margin: 0,
+                          paddingLeft: "20px",
+                          lineHeight: "1.8",
+                          color: "#333"
+                        }}>
+                          {meal.recipe.ingredients?.map((ing, i) => (
+                            <li key={i} style={{ marginBottom: "5px", color: "#333" }}>{ing}</li>
+                          )) || <li style={{ color: "#666" }}>No ingredients available</li>}
+                        </ul>
+                      </div>
+
+                      {/* Instructions Section */}
+                      <div>
+                        <h5 style={{ 
+                          color: borderColor, 
+                          marginBottom: "10px",
+                          fontSize: "14px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px"
+                        }}>
+                          📝 Instructions
+                        </h5>
+                        <p style={{ 
+                          margin: 0,
+                          lineHeight: "1.8",
+                          color: "#333",
+                          whiteSpace: "pre-wrap"
+                        }}>
+                          {meal.recipe.instructions || "No instructions available"}
+                        </p>
+                      </div>
+
+                      {/* Suggestion Reason */}
+                      <div style={{
+                        marginTop: "20px",
+                        padding: "12px",
+                        background: "#f8f9fa",
+                        borderRadius: "6px",
+                        fontSize: "13px",
+                        color: "#666"
+                      }}>
+                        <strong>💡 Why this meal?</strong> {meal.suggestionReason}
+                      </div>
                     </div>
-                    <h4 style={{ margin: "5px 0", color: "#444" }}>{meal.recipe.title}</h4>
-                    <p style={{ fontSize: "0.9rem", color: "#666", marginBottom: "5px" }}>
-                      <em>{meal.recipe.ingredients.slice(0, 4).join(", ")}...</em>
-                    </p>
-                    <small style={{ color: "#777", display: "block", marginTop: "5px" }}>
-                      💡 {meal.suggestionReason}
-                    </small>
-                  </div>
+                  </details>
                 );
               })}
             </div>
