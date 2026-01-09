@@ -1,0 +1,36 @@
+# Data files (too large for git)
+data/*.txt
+!data/recipe_training_improved.txt
+data/*.json
+data/*.csv
+
+# Recipes raw data
+recipes_raw/
+
+# Model files
+app/models/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+
+# Training packages
+*.zip
+training_package*/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+models
+
+CulinaryDB
+Recipe_Training_Improved_Colab

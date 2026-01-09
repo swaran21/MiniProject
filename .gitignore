@@ -35,4 +35,13 @@ pythonML/app/models/recipe_gpt2_improved/
 
 # OS
 .DS_Store
-thumbs.db
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.env
+
+# Java
+target/
+*.class

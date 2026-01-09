@@ -1,0 +1,15 @@
+# Production Training Requirements
+# For RTX 3050 GPU training
+
+# PyTorch with CUDA 11.8
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Transformers
+transformers>=4.35.0
+datasets>=2.14.0
+accelerate>=0.24.0
+
+# Utilities
+tqdm>=4.66.0
