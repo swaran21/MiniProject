@@ -116,4 +116,15 @@ public class MLBridgeService {
             return null;
         }
     }
+
+    public Object chat(String message) {
+        String url = "http://localhost:5000/chat?message=" + message;
+        
+        try {
+            return restTemplate.postForObject(url, null, Object.class);
+        } catch (Exception e) {
+            System.err.println("Error calling chatbot: " + e.getMessage());
+            return null;
+        }
+    }
 }

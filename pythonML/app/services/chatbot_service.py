@@ -9,22 +9,23 @@ class ChatbotService:
     def __init__(self, recipe_service):
         self.recipe_service = recipe_service
         
-        # Intent patterns
+        # Intent patterns - made more flexible
         self.intents = {
             'recipe_search': [
-                r'(?:find|search|show|get|suggest|recommend)\s+(?:me\s+)?(?:a\s+)?(?:recipe|dish)',
+                r'(?:find|search|show|get|suggest|recommend|looking for|need|want).*?(?:recipe|dish|meal)',
                 r'(?:how to|want to)\s+(?:make|cook|prepare)',
                 r'recipe\s+(?:for|with)',
-                r'(?:any|some)\s+recipe'
+                r'(?:any|some)\s+recipe',
+                r'chicken|beef|pork|fish|pasta|rice|curry|soup'  # Common food keywords
             ],
             'ingredient_substitute': [
-                r'(?:replace|substitute|swap|instead of|alternative to)',
+                r'(?:replace|substitute|swap|instead of|alternative)',
                 r'can i use\s+\w+\s+instead',
-                r'what can i use instead of',
-                r'don\'t have'
+                r'what can i use instead',
+                r'don\'t have|no\s+\w+|out of'
             ],
             'nutrition': [
-                r'(?:calories|protein|fat|carbs|nutrition|healthy|diet)',
+                r'(?:calorie|protein|fat|carb|nutrition|healthy|diet)',
                 r'how many calories',
                 r'is this (?:good|bad) for',
                 r'(?:lose|gain) weight'
@@ -33,7 +34,7 @@ class ChatbotService:
                 r'how (?:to|do i|should i)',
                 r'what (?:temperature|time)',
                 r'(?:tip|advice|best way)',
-                r'should i'
+                r'should i cook'
             ],
             'greeting': [
                 r'^(?:hi|hello|hey|greetings)',

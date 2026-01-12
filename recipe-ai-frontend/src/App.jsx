@@ -5,6 +5,7 @@ import RecipeComponent from "./components/RecipeComponent";
 import MealPlanComponent from "./components/MealPlanComponent";
 import DietTrackerComponent from "./components/DietTrackerComponent";
 import BrowseRecipes from "./components/BrowseRecipes";
+import ChatWidget from "./components/ChatWidget";
 import LoginComponent from "./components/LoginComponent";
 import "./App.css";
 
@@ -87,6 +88,9 @@ function App() {
           <MealPlanComponent user={user} />
         )}
       </main>
+
+      {/* Chat Widget - Always visible */}
+      <ChatWidget />
     </div>
   );
 }
