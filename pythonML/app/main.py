@@ -33,6 +33,12 @@ diet_service = DietService()
 # Initialize chatbot service
 chatbot_service = ChatbotService(recipe_service)
 
+# Initialize health services
+from app.services.prescription_analyzer import PrescriptionAnalyzer
+from app.services.recipe_health_scorer import RecipeHealthScorer
+prescription_analyzer = PrescriptionAnalyzer()
+health_scorer = RecipeHealthScorer()
+
 @app.post("/chat")
 async def chat(message: str):
     """AI Chatbot endpoint - Retrieval + Templates"""
@@ -90,6 +96,105 @@ async def get_recipe_by_id(recipe_id: int):
 @app.post("/predict/meal-plan", response_model=MealPlanResponse)
 def generate_meal_plan(profile: UserProfile):
     return meal_service.create_plan(profile)
+
+# ===== HEALTH-BASED MEAL PLANNING ENDPOINTS =====
+
+@app.post("/health/analyze-prescription")
+async def analyze_prescription(prescription_text: str, user_id: int = None):
+    """Analyze prescription text to extract conditions and generate recommendations"""
+    try:
+        analysis = prescription_analyzer.analyze(prescription_text, user_id)
+        return analysis
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")
+
+@app.post("/health/filter-recipes")
+async def filter_recipes_by_health(conditions: list, min_score: int = 70, limit: int = 50):
+    """
+    Filter recipes based on health conditions
+    conditions: list of condition keys (e.g., ['diabetes_type2', 'hypertension'])
+    min_score: minimum health score (0-100)
+    """
+    try:
+        # Get all recipes from database
+        conn = recipe_service.db_conn
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, title, ingredients, instructions, cuisine, calories,
+                   likes, dislikes, rating_score
+            FROM recipes
+            LIMIT 1000
+        """)
+        
+        recipes = []
+        for row in cursor.fetchall():
+            recipes.append({
+                'id': row['id'],
+                'title': row['title'],
+                'ingredients': row['ingredients'],
+                'instructions': row['instructions'],
+                'cuisine': row['cuisine'] or 'Any',
+                'calories': row['calories'],
+                'likes': row['likes'],
+                'dislikes': row['dislikes'],
+                'rating_score': row['rating_score']
+            })
+        
+        # Filter by health score
+        safe_recipes = health_scorer.filter_safe_recipes(recipes, conditions, min_score)
+       
+        return {
+            'total_checked': len(recipes),
+            'safe_recipes_count': len(safe_recipes),
+            'recipes': safe_recipes[:limit]
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Filtering error: {str(e)}")
+
+@app.get("/health/recipe-score/{recipe_id}")
+async def get_recipe_health_score(recipe_id: int, conditions: str):
+    """
+    Get health score for a specific recipe
+    conditions: comma-separated condition keys
+    """
+    try:
+        condition_list = [c.strip() for c in conditions.split(',')]
+        
+        # Get recipe from database
+        conn = recipe_service.db_conn
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,))
+        row = cursor.fetchone()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Recipe not found")
+        
+        recipe = {
+            'id': row['id'],
+            'title': row['title'],
+            'ingredients': row['ingredients']
+        }
+        
+        score = health_scorer.calculate_health_score(recipe, condition_list)
+        category = health_scorer.categorize_recipe(recipe, condition_list)
+        warnings = health_scorer.get_warnings(recipe, condition_list)
+        recommendation = health_scorer.get_recipe_recommendations(recipe, condition_list)
+        
+        return {
+            'recipe_id': recipe_id,
+            'health_score': score,
+            'category': category,
+            'warnings': warnings,
+            'recommendation': recommendation
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+# ===== END HEALTH ENDPOINTS =====
 
 @app.post("/predict/adaptive-diet", response_model=DietRecommendationResponse)
 def adaptive_diet(request: DietLogRequest):
