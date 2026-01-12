@@ -36,8 +36,11 @@ chatbot_service = ChatbotService(recipe_service)
 # Initialize health services
 from app.services.prescription_analyzer import PrescriptionAnalyzer
 from app.services.recipe_health_scorer import RecipeHealthScorer
+from app.services.medical_meal_planner import MedicalMealPlanner
+
 prescription_analyzer = PrescriptionAnalyzer()
 health_scorer = RecipeHealthScorer()
+medical_meal_planner = MedicalMealPlanner(recipe_service.db_conn)
 
 @app.post("/chat")
 async def chat(message: str):
@@ -193,6 +196,46 @@ async def get_recipe_health_score(recipe_id: int, conditions: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+@app.post("/health/generate-meal-plan")
+async def generate_medical_meal_plan(
+    prescription_text: str = None,
+    conditions: list = None,
+    user_id: int = None,
+    duration_days: int = None
+):
+    """
+    Generate complete medical meal plan
+    Either provide prescription_text OR conditions list
+    """
+    try:
+        # Analyze prescription if provided
+        if prescription_text:
+            analysis = prescription_analyzer.analyze(prescription_text, user_id)
+        elif conditions:
+            # Create minimal analysis from condition list
+            analysis = {
+                'user_id': user_id,
+                'detected_conditions': conditions,
+                'plan_duration_days': duration_days or 90,
+                'medications': [],
+                'special_notes': []
+            }
+        else:
+            raise HTTPException(
+                status_code=400, 
+                detail="Provide either prescription_text or conditions list"
+            )
+        
+        # Generate meal plan
+        meal_plan = medical_meal_planner.create_plan(analysis, duration_days)
+        
+        return meal_plan
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Meal plan error: {str(e)}")
 
 # ===== END HEALTH ENDPOINTS =====
 
