@@ -5,6 +5,7 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import os
 import random
 import re
+import sqlite3
 
 class RecipeService:
     def __init__(self):
@@ -29,8 +30,30 @@ class RecipeService:
             print(f"⚠️  Model not found at {model_path}, using templates")
             self.use_ml = False
             
-        # Initialize Dataset for Retrieval (Hybrid RAG)
-        self.load_dataset_for_retrieval()
+        # Initialize Database Connection (Hybrid RAG)
+        self.db_conn = None
+        self.init_database_connection()
+    
+    def init_database_connection(self):
+        """Initialize SQLite database connection"""
+        import sqlite3
+        db_path = "data/recipes.db"
+        
+        if not os.path.exists(db_path):
+            print(f"⚠️ Database not found at {db_path}")
+            print(f"💡 Run 'python seed_db.py' to create the database")
+            return
+        
+        try:
+            self.db_conn = sqlite3.connect(db_path, check_same_thread=False)
+            self.db_conn.row_factory = sqlite3.Row  # Access columns by name
+            cursor = self.db_conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM recipes")
+            count = cursor.fetchone()[0]
+            print(f"✅ Connected to recipe database ({count} recipes loaded)")
+        except Exception as e:
+            print(f"⚠️ Failed to connect to database: {e}")
+            self.db_conn = None
     
     def _generate_with_ml(self, ingredients: str) -> dict:
         """Generate recipe using trained GPT-2 model with improved output quality"""
@@ -201,77 +224,84 @@ class RecipeService:
         
         return '. '.join(cleaned) + '.'
     
-    
-    def load_dataset_for_retrieval(self):
-        """Load the training dataset into memory for KNN/Search retrieval"""
-        self.dataset_recipes = []
-        data_path = "data/recipe_training_improved.txt"
-        
-        if not os.path.exists(data_path):
-            print(f"⚠️ Dataset not found at {data_path}, skipping retrieval mode.")
-            return
-
-        print("📚 Loading dataset for Smart Retrieval...")
-        try:
-            with open(data_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-                
-            # Split by recipe blocks
-            blocks = content.split('INPUT:')
-            for block in blocks:
-                if not block.strip(): continue
-                
-                try:
-                    parts = block.split('OUTPUT:')
-                    if len(parts) < 2: continue
-                    
-                    input_Ings = parts[0].strip().lower()
-                    output_Text = parts[1].strip()
-                    
-                    # Store for search
-                    self.dataset_recipes.append({
-                        'input_tokens': set([t.strip() for t in input_Ings.split(',') if t.strip()]),
-                        'full_text': output_Text,
-                        'original_input': input_Ings
-                    })
-                except:
-                    continue
-            print(f"✅ Loaded {len(self.dataset_recipes)} recipes for smart retrieval.")
-        except Exception as e:
-            print(f"⚠️ Failed to load dataset: {e}")
 
     def find_best_match(self, user_ingredients: str) -> dict:
-        """Find the best matching recipe from the dataset"""
-        if not hasattr(self, 'dataset_recipes') or not self.dataset_recipes:
-             return None
-             
-        user_tokens = set([t.strip() for t in user_ingredients.lower().split(',') if t.strip()])
-        if not user_tokens: return None
+        """Find the best matching recipe using SQLite FTS5 search"""
+        if not self.db_conn:
+            return None
         
-        best_recipe = None
-        best_score = 0
-        
-        for recipe in self.dataset_recipes:
-            # Score methods
-            recipe_tokens = recipe['input_tokens']
+        try:
+            cursor = self.db_conn.cursor()
             
-            # Intersection count
-            intersection = len(user_tokens.intersection(recipe_tokens))
+            # Clean and prepare search query
+            ingredients_clean = user_ingredients.lower().strip()
+            search_tokens = [t.strip() for t in ingredients_clean.split(',') if t.strip()]
             
-            if intersection > best_score:
-                best_score = intersection
-                best_recipe = recipe
-        
-        # Strictness: Must match at least 50% of user inputs?
-        if best_recipe and best_score > 0:
-             match_pct = best_score / len(user_tokens)
-             # If user provides 2 ingredients, at least 1 must match.
-             if match_pct >= 0.5:
-                 print(f"🎯 Exact Match Found! Score: {best_score}/{len(user_tokens)}")
-                 # Parse the stored text
-                 return self._parse_recipe_text(best_recipe['full_text'].replace('<END>', '').strip())
-        
-        return None
+            if not search_tokens:
+                return None
+            
+            # Build FTS5 query (e.g., "chicken AND garlic")
+            fts_query = ' AND '.join(search_tokens)
+            
+            # Search using FTS5 Full-Text Search (Ranked by relevance)
+            cursor.execute("""
+                SELECT 
+                    r.id, r.title, r.ingredients, r.instructions, r.cuisine,
+                    bm25(recipes_fts) as score
+                FROM recipes r
+                JOIN recipes_fts ON recipes_fts.rowid = r.id
+                WHERE recipes_fts MATCH ?
+                ORDER BY score
+                LIMIT 1
+            """, (fts_query,))
+            
+            row = cursor.fetchone()
+            
+            if row:
+                print(f"🎯 Database Match Found! Recipe ID: {row['id']}, Score: {row['score']:.2f}")
+                
+                # Parse ingredients from database format
+                ingredients_list = [i.strip() for i in row['ingredients'].split(';') if i.strip()]
+                
+                return {
+                    'title': row['title'],
+                    'ingredients': ingredients_list,
+                    'instructions': row['instructions'],
+                    'cuisine': row['cuisine'] or 'Any'
+                }
+            
+            # Fallback: Try OR search if AND was too strict
+            fts_query_or = ' OR '.join(search_tokens)
+            cursor.execute("""
+                SELECT 
+                    r.id, r.title, r.ingredients, r.instructions, r.cuisine,
+                    bm25(recipes_fts) as score
+                FROM recipes r
+                JOIN recipes_fts ON recipes_fts.rowid = r.id
+                WHERE recipes_fts MATCH ?
+                ORDER BY score
+                LIMIT 1
+            """, (fts_query_or,))
+            
+            row = cursor.fetchone()
+            
+            if row:
+                print(f"🎯 Partial Match Found (OR search): ID {row['id']}")
+                ingredients_list = [i.strip() for i in row['ingredients'].split(';') if i.strip()]
+                
+                return {
+                    'title': row['title'],
+                    'ingredients': ingredients_list,
+                    'instructions': row['instructions'],
+                    'cuisine': row['cuisine'] or 'Any'
+                }
+            
+            return None
+            
+        except Exception as e:
+            print(f"⚠️ Database search failed: {e}")
+            return None
+
 
     def generate(self, request: RecipeRequest) -> RecipeResponse:
         print(f"DEBUG: Recipe Generation - Use ML? {self.use_ml}")

@@ -34,3 +34,9 @@ models
 
 CulinaryDB
 Recipe_Training_Improved_Colab
+
+# SQLite Database (build locally with seed_db.py)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
