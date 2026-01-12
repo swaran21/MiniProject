@@ -8,6 +8,7 @@ from app.models import (
 from app.services.recipe_service import RecipeService
 from app.services.meal_service import MealPlanService
 from app.services.diet_service import DietService
+from app.services.chatbot_service import ChatbotService
 
 app = FastAPI(title="NutriChef AI - Machine Learning Microservice")
 
@@ -28,6 +29,18 @@ def read_root():
 recipe_service = RecipeService()
 meal_service = MealPlanService()
 diet_service = DietService()
+
+# Initialize chatbot service
+chatbot_service = ChatbotService(recipe_service)
+
+@app.post("/chat")
+async def chat(message: str):
+    """AI Chatbot endpoint - Retrieval + Templates"""
+    try:
+        response = chatbot_service.chat(message)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
 
 @app.post("/predict/recipe")
 async def predict_recipe(request: RecipeRequest):
