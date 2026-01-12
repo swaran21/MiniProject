@@ -127,4 +127,75 @@ public class MLBridgeService {
             return null;
         }
     }
+
+    // ===== HEALTH-BASED MEAL PLANNING METHODS =====
+    
+    public Object analyzePrescription(String prescriptionText, Integer userId) {
+        String url = "http://localhost:5000/health/analyze-prescription?prescription_text=" 
+                    + prescriptionText;
+        if (userId != null) {
+            url += "&user_id=" + userId;
+        }
+        
+        try {
+            return restTemplate.postForObject(url, null, Object.class);
+        } catch (Exception e) {
+            System.err.println("Error analyzing prescription: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    public Object filterRecipesByHealth(java.util.List<String> conditions, Integer minScore, Integer limit) {
+        String url = "http://localhost:5000/health/filter-recipes";
+        
+        java.util.Map<String, Object> request = new java.util.HashMap<>();
+        request.put("conditions", conditions);
+        request.put("min_score", minScore);
+        request.put("limit", limit);
+        
+        try {
+            return restTemplate.postForObject(url, request, Object.class);
+        } catch (Exception e) {
+            System.err.println("Error filtering recipes: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    public Object getRecipeHealthScore(Long recipeId, String conditions) {
+        String url = "http://localhost:5000/health/recipe-score/" + recipeId 
+                    + "?conditions=" + conditions;
+        
+        try {
+            return restTemplate.getForObject(url, Object.class);
+        } catch (Exception e) {
+            System.err.println("Error getting recipe health score: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    public Object generateMealPlan(String prescriptionText, java.util.List<String> conditions, 
+                                   Integer userId, Integer durationDays) {
+        String url = "http://localhost:5000/health/generate-meal-plan";
+        
+        java.util.Map<String, Object> request = new java.util.HashMap<>();
+        if (prescriptionText != null) {
+            request.put("prescription_text", prescriptionText);
+        }
+        if (conditions != null) {
+            request.put("conditions", conditions);
+        }
+        if (userId != null) {
+            request.put("user_id", userId);
+        }
+        if (durationDays != null) {
+            request.put("duration_days", durationDays);
+        }
+        
+        try {
+            return restTemplate.postForObject(url, request, Object.class);
+        } catch (Exception e) {
+            System.err.println("Error generating meal plan: " + e.getMessage());
+            return null;
+        }
+    }
 }
