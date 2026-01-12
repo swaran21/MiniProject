@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from app.models import (
     RecipeRequest, RecipeResponse, 
     UserProfile, MealPlanResponse, 
@@ -9,6 +10,15 @@ from app.services.meal_service import MealPlanService
 from app.services.diet_service import DietService
 
 app = FastAPI(title="NutriChef AI - Machine Learning Microservice")
+
+# Configure CORS to allow React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:8080"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def read_root():
@@ -44,6 +54,25 @@ async def get_recipe_rating(recipe_id: int):
         return stats
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+@app.get("/predict/recipes/search")
+async def search_recipes(query: str, limit: int = 10):
+    """Search recipes by name/title"""
+    try:
+        results = recipe_service.search_recipes_by_name(query, limit)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/predict/recipes/{recipe_id}")
+async def get_recipe_by_id(recipe_id: int):
+    """Get full recipe details by ID"""
+    try:
+        recipe = recipe_service.get_recipe_by_id(recipe_id)
+        return recipe
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
 
 @app.post("/predict/meal-plan", response_model=MealPlanResponse)
 def generate_meal_plan(profile: UserProfile):

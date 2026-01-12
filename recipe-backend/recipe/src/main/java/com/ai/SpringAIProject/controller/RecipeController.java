@@ -54,6 +54,19 @@ public class RecipeController {
         return mlService.getRecipeRating(recipeId);
     }
 
+    @GetMapping("/search")
+    public Object searchRecipes(@RequestParam String query, 
+                                @RequestParam(defaultValue = "10") int limit) {
+        System.out.println("Searching recipes for: " + query);
+        return mlService.searchRecipes(query, limit);
+    }
+
+    @GetMapping("/{recipeId}/details")
+    public Object getRecipeDetails(@PathVariable Long recipeId) {
+        System.out.println("Getting recipe details for ID: " + recipeId);
+        return mlService.getRecipeById(recipeId);
+    }
+
     @PostMapping("/identify-ingredients")
     public String identifyIngredients() {
         return "Feature coming soon: Will process image via Python ML";

@@ -453,6 +453,80 @@ class RecipeService:
             'total_ratings': row['rating_count']
         }
     
+    def search_recipes_by_name(self, query: str, limit: int = 10):
+        """Search recipes by title using FTS5"""
+        if not self.db_conn:
+            raise Exception("Database not connected")
+        
+        cursor = self.db_conn.cursor()
+        
+        try:
+            # Add wildcard for partial matching
+            search_query = f"{query}*"
+            
+            # Search by title using FTS5
+            cursor.execute("""
+                SELECT 
+                    r.id, r.title, r.cuisine, r.likes, r.dislikes, 
+                    r.rating_score, r.rating_count,
+                    bm25(recipes_fts) as relevance
+                FROM recipes r
+                JOIN recipes_fts ON recipes_fts.rowid = r.id
+                WHERE recipes_fts.title MATCH ?
+                ORDER BY rating_score DESC, relevance
+                LIMIT ?
+            """, (search_query, limit))
+            
+            results = []
+            for row in cursor.fetchall():
+                results.append({
+                    'id': row['id'],
+                    'title': row['title'],
+                    'cuisine': row['cuisine'] or 'Any',
+                    'likes': row['likes'],
+                    'dislikes': row['dislikes'],
+                    'rating_score': round(row['rating_score'], 2),
+                    'total_ratings': row['rating_count']
+                })
+            
+            return results
+            
+        except Exception as e:
+            raise Exception(f"Search failed: {e}")
+    
+    def get_recipe_by_id(self, recipe_id: int):
+        """Get full recipe details by ID"""
+        if not self.db_conn:
+            raise Exception("Database not connected")
+        
+        cursor = self.db_conn.cursor()
+        cursor.execute("""
+            SELECT id, title, ingredients, instructions, cuisine,
+                   likes, dislikes, rating_score, rating_count
+            FROM recipes
+            WHERE id = ?
+        """, (recipe_id,))
+        
+        row = cursor.fetchone()
+        
+        if not row:
+            raise Exception(f"Recipe {recipe_id} not found")
+        
+        # Parse ingredients
+        ingredients_list = [i.strip() for i in row['ingredients'].split(';') if i.strip()]
+        
+        return {
+            'id': row['id'],
+            'title': row['title'],
+            'ingredients': ingredients_list,
+            'instructions': row['instructions'],
+            'cuisine': row['cuisine'] or 'Any',
+            'likes': row['likes'],
+            'dislikes': row['dislikes'],
+            'rating_score': round(row['rating_score'], 3),
+            'total_ratings': row['rating_count']
+        }
+    
     def generate(self, request: RecipeRequest) -> RecipeResponse:
         print(f"DEBUG: Recipe Generation - Use ML? {self.use_ml}")
         

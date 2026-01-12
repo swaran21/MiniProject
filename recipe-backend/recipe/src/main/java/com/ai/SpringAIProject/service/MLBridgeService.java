@@ -93,4 +93,27 @@ public class MLBridgeService {
             return null;
         }
     }
+
+    public Object searchRecipes(String query, int limit) {
+        String url = "http://localhost:5000/predict/recipes/search?query=" 
+                    + query + "&limit=" + limit;
+        
+        try {
+            return restTemplate.getForObject(url, Object.class);
+        } catch (Exception e) {
+            System.err.println("Error searching recipes: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public Object getRecipeById(Long recipeId) {
+        String url = "http://localhost:5000/predict/recipes/" + recipeId;
+        
+        try {
+            return restTemplate.getForObject(url, Object.class);
+        } catch (Exception e) {
+            System.err.println("Error getting recipe by ID: " + e.getMessage());
+            return null;
+        }
+    }
 }

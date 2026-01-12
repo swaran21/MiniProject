@@ -28,6 +28,13 @@ function Navbar({ activeTab, setActiveTab }) {
         </button>
         
         <button 
+          className={`nav-link ${activeTab === "browse" ? "active" : ""}`} 
+          onClick={() => setActiveTab("browse")}
+        >
+          Browse Recipes
+        </button>
+        
+        <button 
           className={`nav-link ${activeTab === "mealplan" ? "active" : ""}`} 
           onClick={() => setActiveTab("mealplan")}
         >
