@@ -25,12 +25,13 @@ class DietLogRequest(BaseModel):
 # --- Output Models ---
 
 class RecipeResponse(BaseModel):
+    id: int = None  # Optional recipe ID for database matches
     title: str
-    ingredients: List[str]
+    ingredients: list[str]
     instructions: str
     cuisineType: str
     calories: int
-    imageUrl: str  # Placeholder URL is fine for now
+    imageUrl: str = ""# Placeholder URL is fine for now
 
 class Meal(BaseModel):
     name: str

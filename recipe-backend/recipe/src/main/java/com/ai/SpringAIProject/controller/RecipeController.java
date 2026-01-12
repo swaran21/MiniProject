@@ -38,6 +38,22 @@ public class RecipeController {
         return mlService.generateRecipe(ingredients, cuisine, finalRestrictions);
     }
 
+    @PostMapping("/{recipeId}/rate")
+    public Object rateRecipe(@PathVariable Long recipeId,
+                            @RequestParam int rating,
+                            @RequestParam(required = false) Long userId) {
+        // Default to anonymous user if userId not provided
+        String userIdString = userId != null ? userId.toString() : "anonymous";
+        
+        System.out.println("Rating recipe " + recipeId + " with rating " + rating + " by user " + userIdString);
+        return mlService.rateRecipe(recipeId, userIdString, rating);
+    }
+
+    @GetMapping("/{recipeId}/rating")
+    public Object getRecipeRating(@PathVariable Long recipeId) {
+        return mlService.getRecipeRating(recipeId);
+    }
+
     @PostMapping("/identify-ingredients")
     public String identifyIngredients() {
         return "Feature coming soon: Will process image via Python ML";

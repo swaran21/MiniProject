@@ -91,9 +91,38 @@ class RecipeService:
         
         # Use centralized parser
         return self._parse_recipe_text(recipe_text)
-
+    
+    def _remove_copyright_noise(self, text: str) -> str:
+        """Remove copyright notices and licensing text from ML output"""
+        if not text:
+            return text
+        
+        # Common copyright patterns to remove
+        copyright_patterns = [
+            r'Copyright\s*©?\s*\d{4}.*?All rights reserved\.?',
+            r'©\s*\d{4}.*?All rights reserved\.?',
+            r'This recipe was provided.*?commercial purposes["\']?',
+            r'Recipe courtesy of.*?Food Network',
+            r'Television Food Network.*?All rights reserved',
+            r'Recipe provided under license.*?commercial purposes',
+            r'not available.*?commercial purposes',
+            r'All rights reserved\.',
+            r'Used with permission\.',
+        ]
+        
+        cleaned = text
+        for pattern in copyright_patterns:
+            cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Remove multiple spaces and empty lines left behind
+        cleaned = re.sub(r'\s+', ' ', cleaned)
+        cleaned = re.sub(r'\n\s*\n', '\n', cleaned)
+        
+        return cleaned.strip()
+    
     def _parse_recipe_text(self, recipe_text: str) -> dict:
         """Robustly parse raw recipe text into structured data"""
+        recipe_text = self._remove_copyright_noise(recipe_text)
         title = "AI Generated Recipe"
         ingredients_list = []
         instructions = "Mix all ingredients and cook until done."
@@ -178,6 +207,8 @@ class RecipeService:
             ingredients_list = cleaned_ingredients
 
         # Final Cleanup of instructions
+        # Remove copyright notices (ML artifacts)
+        instructions = self._remove_copyright_noise(instructions)
         instructions = self._remove_repetition(instructions)
         instructions = re.sub(r'\s+', ' ', instructions).strip()
         # Remove any leftover "TITLE |" garbage from instructions
@@ -243,31 +274,37 @@ class RecipeService:
             # Build FTS5 query (e.g., "chicken AND garlic")
             fts_query = ' AND '.join(search_tokens)
             
-            # Search using FTS5 Full-Text Search (Ranked by relevance)
+            # Search using FTS5 Full-Text Search (Ranked by relevance + ratings)
             cursor.execute("""
                 SELECT 
                     r.id, r.title, r.ingredients, r.instructions, r.cuisine,
-                    bm25(recipes_fts) as score
+                    r.likes, r.dislikes, r.rating_score,
+                    bm25(recipes_fts) as search_score,
+                    (bm25(recipes_fts) * 0.7) + (r.rating_score * 0.3) as final_score
                 FROM recipes r
                 JOIN recipes_fts ON recipes_fts.rowid = r.id
                 WHERE recipes_fts MATCH ?
-                ORDER BY score
+                ORDER BY final_score
                 LIMIT 1
             """, (fts_query,))
             
             row = cursor.fetchone()
             
             if row:
-                print(f"🎯 Database Match Found! Recipe ID: {row['id']}, Score: {row['score']:.2f}")
+                print(f"🎯 Database Match Found! Recipe ID: {row['id']}, Final Score: {row['final_score']:.2f}")
                 
                 # Parse ingredients from database format
                 ingredients_list = [i.strip() for i in row['ingredients'].split(';') if i.strip()]
                 
                 return {
+                    'id': row['id'],
                     'title': row['title'],
                     'ingredients': ingredients_list,
                     'instructions': row['instructions'],
-                    'cuisine': row['cuisine'] or 'Any'
+                    'cuisine': row['cuisine'] or 'Any',
+                    'likes': row['likes'],
+                    'dislikes': row['dislikes'],
+                    'rating_score': row['rating_score']
                 }
             
             # Fallback: Try OR search if AND was too strict
@@ -275,25 +312,31 @@ class RecipeService:
             cursor.execute("""
                 SELECT 
                     r.id, r.title, r.ingredients, r.instructions, r.cuisine,
-                    bm25(recipes_fts) as score
+                    r.likes, r.dislikes, r.rating_score,
+                    bm25(recipes_fts) as search_score,
+                    (bm25(recipes_fts) * 0.7) + (r.rating_score * 0.3) as final_score
                 FROM recipes r
                 JOIN recipes_fts ON recipes_fts.rowid = r.id
                 WHERE recipes_fts MATCH ?
-                ORDER BY score
+                ORDER BY final_score
                 LIMIT 1
             """, (fts_query_or,))
             
             row = cursor.fetchone()
             
             if row:
-                print(f"🎯 Partial Match Found (OR search): ID {row['id']}")
+                print(f"🎯 Partial Match Found (OR search): ID {row['id']}, Final Score: {row['final_score']:.2f}")
                 ingredients_list = [i.strip() for i in row['ingredients'].split(';') if i.strip()]
                 
                 return {
+                    'id': row['id'],
                     'title': row['title'],
                     'ingredients': ingredients_list,
                     'instructions': row['instructions'],
-                    'cuisine': row['cuisine'] or 'Any'
+                    'cuisine': row['cuisine'] or 'Any',
+                    'likes': row['likes'],
+                    'dislikes': row['dislikes'],
+                    'rating_score': row['rating_score']
                 }
             
             return None
@@ -302,7 +345,114 @@ class RecipeService:
             print(f"⚠️ Database search failed: {e}")
             return None
 
-
+    def rate_recipe(self, recipe_id: int, user_id: str, rating: int):
+        """
+        Rate a recipe (1 for like, -1 for dislike)
+        Uses Wilson score for confident rating calculation
+        """
+        if not self.db_conn:
+            raise Exception("Database not connected")
+        
+        if rating not in [1, -1]:
+            raise ValueError("Rating must be 1 (like) or -1 (dislike)")
+        
+        cursor = self.db_conn.cursor()
+        
+        try:
+            # Check if user already rated this recipe
+            cursor.execute("""
+                SELECT rating FROM user_ratings 
+                WHERE user_id = ? AND recipe_id = ?
+            """, (user_id, recipe_id))
+            
+            existing = cursor.fetchone()
+            
+            if existing:
+                old_rating = existing['rating']
+                
+                # Update existing rating
+                cursor.execute("""
+                    UPDATE user_ratings 
+                    SET rating = ?, created_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND recipe_id = ?
+                """, (rating, user_id, recipe_id))
+                
+                # Adjust recipe stats
+                if old_rating == 1 and rating == -1:
+                    # Changed from like to dislike
+                    cursor.execute("""
+                        UPDATE recipes 
+                        SET likes = likes - 1, dislikes = dislikes + 1
+                        WHERE id = ?
+                    """, (recipe_id,))
+                elif old_rating == -1 and rating == 1:
+                    # Changed from dislike to like
+                    cursor.execute("""
+                        UPDATE recipes 
+                        SET likes = likes + 1, dislikes = dislikes - 1
+                        WHERE id = ?
+                    """, (recipe_id,))
+            else:
+                # Insert new rating
+                cursor.execute("""
+                    INSERT INTO user_ratings (user_id, recipe_id, rating)
+                    VALUES (?, ?, ?)
+                """, (user_id, recipe_id, rating))
+                
+                # Update recipe stats
+                if rating == 1:
+                    cursor.execute("""
+                        UPDATE recipes SET likes = likes + 1 WHERE id = ?
+                    """, (recipe_id,))
+                else:
+                    cursor.execute("""
+                        UPDATE recipes SET dislikes = dislikes + 1 WHERE id = ?
+                    """, (recipe_id,))
+            
+            # Calculate Wilson score for ranking
+            # Formula: (positive + 1.9208) / (positive + negative + 3.8416)
+            # This gives a conservative lower bound of the true rating
+            cursor.execute("""
+                UPDATE recipes
+                SET rating_score = (likes + 1.9208) / (likes + dislikes + 3.8416),
+                    rating_count = likes + dislikes
+                WHERE id = ?
+            """, (recipe_id,))
+            
+            self.db_conn.commit()
+            
+            # Return updated stats
+            return self.get_recipe_rating(recipe_id)
+            
+        except sqlite3.Error as e:
+            self.db_conn.rollback()
+            raise Exception(f"Database error: {e}")
+    
+    def get_recipe_rating(self, recipe_id: int):
+        """Get rating statistics for a recipe"""
+        if not self.db_conn:
+            raise Exception("Database not connected")
+        
+        cursor = self.db_conn.cursor()
+        cursor.execute("""
+            SELECT id, likes, dislikes, rating_score, rating_count
+            FROM recipes
+            WHERE id = ?
+        """, (recipe_id,))
+        
+        row = cursor.fetchone()
+        
+        if not row:
+            raise Exception(f"Recipe {recipe_id} not found")
+        
+        return {
+            'recipe_id': row['id'],
+            'likes': row['likes'],
+            'dislikes': row['dislikes'],
+            'rating_score': round(row['rating_score'], 3),
+            'total_ratings': row['rating_count']
+        }
+    
     def generate(self, request: RecipeRequest) -> RecipeResponse:
         print(f"DEBUG: Recipe Generation - Use ML? {self.use_ml}")
         
@@ -311,6 +461,7 @@ class RecipeService:
              retrieved_recipe = self.find_best_match(request.ingredients)
              if retrieved_recipe:
                  return RecipeResponse(
+                    id=retrieved_recipe.get('id'),  # Include recipe ID for ratings
                     title=retrieved_recipe['title'] + " (Smart Match)",
                     ingredients=retrieved_recipe['ingredients'],
                     instructions=retrieved_recipe['instructions'],

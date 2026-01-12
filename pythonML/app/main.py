@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from app.models import (
     RecipeRequest, RecipeResponse, 
     UserProfile, MealPlanResponse, 
@@ -19,9 +19,31 @@ recipe_service = RecipeService()
 meal_service = MealPlanService()
 diet_service = DietService()
 
-@app.post("/predict/recipe", response_model=RecipeResponse)
-def generate_recipe(request: RecipeRequest):
+@app.post("/predict/recipe")
+async def predict_recipe(request: RecipeRequest):
     return recipe_service.generate(request)
+
+@app.post("/predict/recipe/rate")
+async def rate_recipe(
+    recipe_id: int,
+    user_id: str,
+    rating: int  # 1 for like, -1 for dislike
+):
+    """Rate a recipe to improve search quality"""
+    try:
+        result = recipe_service.rate_recipe(recipe_id, user_id, rating)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/predict/recipe/{recipe_id}/rating")
+async def get_recipe_rating(recipe_id: int):
+    """Get rating statistics for a recipe"""
+    try:
+        stats = recipe_service.get_recipe_rating(recipe_id)
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 @app.post("/predict/meal-plan", response_model=MealPlanResponse)
 def generate_meal_plan(profile: UserProfile):

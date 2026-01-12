@@ -45,3 +45,7 @@ pythonML/app/models/recipe_gpt2_improved/
 # Java
 target/
 *.class
+
+# Private planning documents
+IMPROVEMENTS_ROADMAP.md
+

@@ -9,6 +9,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RecipeResponseDTO {
+    private Long id;  // Recipe ID for database matches
     private String title;
     private List<String> ingredients;
     private String instructions;

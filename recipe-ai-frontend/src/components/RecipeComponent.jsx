@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import RecipeRating from "./RecipeRating";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -44,6 +45,7 @@ function RecipeComponent({ user }) {
 
       const response = await fetch(`${API_BASE_URL}/api/recipes/generate?${params}`);
       const data = await response.json();
+      console.log("Recipe received:", data); // Debug: Check if ID exists
       setRecipe(data);
     } catch (error) {
       console.error("Error:", error);
@@ -193,6 +195,9 @@ function RecipeComponent({ user }) {
                 <strong>Instructions:</strong>
                 <p>{recipe.instructions}</p>
               </div>
+              
+              {/* Rating Component - Always show for database matches */}
+              <RecipeRating recipeId={recipe.id} user={user} />
             </div>
           )}
         </>

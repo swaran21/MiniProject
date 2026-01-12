@@ -29,6 +29,7 @@ public class MLBridgeService {
             if (response != null) {
                 // 3. Map DTO to Domain Model
                 return new Recipe(
+                    response.getId(),  // Include ID for rating functionality
                     response.getTitle(),
                     response.getIngredients(),
                     response.getInstructions(),
@@ -43,6 +44,7 @@ public class MLBridgeService {
 
         // Fallback if service is down / fails
         return new Recipe(
+            null,  // No ID for fallback
             "Service Unavailable",
             Arrays.asList("Error"),
             "Could not generate recipe. Ensure Python Service is running.",
@@ -66,5 +68,29 @@ public class MLBridgeService {
         // TODO: Send imageBytes to Python Computer Vision Model (YOLO/TensorFlow)
         // For now, return dummy detected ingredients
         return Arrays.asList("Tomato", "Onion", "Green Pepper");
+    }
+
+    public Object rateRecipe(Long recipeId, String userId, int rating) {
+        String url = "http://localhost:5000/predict/recipe/rate?recipe_id=" + recipeId 
+                    + "&user_id=" + userId 
+                    + "&rating=" + rating;
+        
+        try {
+            return restTemplate.postForObject(url, null, Object.class);
+        } catch (Exception e) {
+            System.err.println("Error rating recipe: " + e.getMessage());
+            return null;
+        }
+    }
+
+    public Object getRecipeRating(Long recipeId) {
+        String url = "http://localhost:5000/predict/recipe/" + recipeId + "/rating";
+        
+        try {
+            return restTemplate.getForObject(url, Object.class);
+        } catch (Exception e) {
+            System.err.println("Error getting recipe rating: " + e.getMessage());
+            return null;
+        }
     }
 }
