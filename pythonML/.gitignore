@@ -1,42 +1,201 @@
-# Data files (too large for git)
-data/*.txt
-!data/recipe_training_improved.txt
-data/*.json
-data/*.csv
+# NutriChef AI - .gitignore
+# Organized by category with size justifications
 
-# Recipes raw data
+# ============================================================================
+# RAW DATA FILES (Too large for regular Git - use Git LFS or exclude)
+# ============================================================================
+
+# Raw recipe sources (196 MB total)
+data/raw/recipes_raw/
+data/raw/FoodData_Central*/
+data/raw/CulinaryDB/
+
+# Legacy raw data locations (if any remain)
 recipes_raw/
+FoodData_Central*/
+CulinaryDB/
+Recipe_Training_Improved_Colab/
 
-# Model files
-app/models/
+# ============================================================================
+# TRAINING DATA (Use Git LFS for these)
+# ============================================================================
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-*.egg-info/
+# Large training files (15-142 MB each)
+data/training/*.txt
+data/training/*.json
+!data/training/recipe_training_improved.txt  # Track with Git LFS
 
-# Training packages
-*.zip
-training_package*/
+# Training CSVs
+data/training/**/*.csv
+!data/training/diet_recommendations/diet_recommendations_dataset.csv  # Small, can commit
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# ============================================================================
+# GENERATED FILES (Build locally, don't commit)
+# ============================================================================
 
-models
+# Databases (27+ MB, generated with seed_db.py)
+data/database/*.db
+data/database/*.db-journal
+data/database/*.sqlite*
 
-CulinaryDB
-Recipe_Training_Improved_Colab
-
-# SQLite Database (build locally with seed_db.py)
+# Any loose database files
 *.db
 *.db-journal
 *.sqlite
 *.sqlite3
+
+# Old data folder structures (if any remain)
+data/*.txt
+data/*.json
+data/*.csv
+
+# ============================================================================
+# ML MODELS (Large, generated from training)
+# ============================================================================
+
+# Trained models directory
+app/models/
+models/
+
+# Model files anywhere
+*.pth
+*.pt
+*.h5
+*.pkl
+*.joblib
+*.onnx
+
+# Tokenizer files
+**/tokenizer_config.json
+**/vocab.json
+**/merges.txt
+**/special_tokens_map.json
+
+# ============================================================================
+# PYTHON ARTIFACTS
+# ============================================================================
+
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyc
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+.Python
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ============================================================================
+# ARCHIVES & PACKAGES
+# ============================================================================
+
+*.zip
+*.tar.gz
+*.rar
+*.7z
+training_package*/
+diet recommendation.zip
+
+# ============================================================================
+# IDE & EDITOR FILES
+# ============================================================================
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm / IntelliJ
+.idea/
+*.iml
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ============================================================================
+# OS FILES
+# ============================================================================
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+
+# ============================================================================
+# LOGS & TEMPORARY FILES
+# ============================================================================
+
+*.log
+*.tmp
+*.temp
+*.cache
+
+# Training logs
+runs/
+logs/
+tensorboard/
+
+# ============================================================================
+# TESTING & COVERAGE
+# ============================================================================
+
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+
+# ============================================================================
+# JUPYTER NOTEBOOKS (Keep .ipynb, ignore checkpoints)
+# ============================================================================
+
+.ipynb_checkpoints/
+*-checkpoint.ipynb
+
+# ============================================================================
+# WHAT SHOULD BE IN GIT
+# ============================================================================
+
+# ✅ Source code (Python files)
+# ✅ Configuration files (medical_nutrition_rules.py)
+# ✅ Small datasets (< 1 MB)
+# ✅ Documentation (README, markdown files)
+# ✅ Requirements files
+# ✅ Database schema/migration scripts
+# ✅ Test scripts
+
+# ============================================================================
+# GIT LFS CANDIDATES
+# ============================================================================
+
+# If you configure Git LFS, track these:
+# - data/training/recipe_training_improved.txt (15.5 MB)
+# - data/training/*.txt (training files)
+# - Potentially the CSV if > 10 MB
+
+# To configure Git LFS:
+# git lfs install
+# git lfs track "data/training/*.txt"
+# git add .gitattributes

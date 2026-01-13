@@ -4,7 +4,7 @@ Generates personalized meal plans based on medical conditions
 """
 
 from app.services.recipe_health_scorer import RecipeHealthScorer
-from app.data.medical_nutrition_rules import MEDICAL_NUTRITION_RULES
+from data.config.medical_nutrition_rules import MEDICAL_NUTRITION_RULES
 from typing import Dict, List
 from datetime import datetime, timedelta
 import random

@@ -37,7 +37,7 @@ class RecipeService:
     def init_database_connection(self):
         """Initialize SQLite database connection"""
         import sqlite3
-        db_path = "data/recipes.db"
+        db_path = "data/database/recipes.db"
         
         if not os.path.exists(db_path):
             print(f"⚠️ Database not found at {db_path}")

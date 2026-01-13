@@ -88,7 +88,7 @@ def parse_recipe_text(text):
         'cuisine': cuisine
     }
 
-def seed_from_text_file(conn, text_file='data/recipe_training_improved.txt'):
+def seed_from_text_file(conn, text_file='data/training/recipe_training_improved.txt'):
     """Read text file and populate database"""
     if not os.path.exists(text_file):
         print(f"❌ Error: {text_file} not found!")

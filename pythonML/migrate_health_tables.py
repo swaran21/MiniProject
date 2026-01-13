@@ -9,7 +9,7 @@ from datetime import datetime
 def migrate_health_tables():
     """Add health-related tables to recipes database"""
     
-    conn = sqlite3.connect('app/data/recipes.db')
+    conn = sqlite3.connect('data/database/recipes.db')
     cursor = conn.cursor()
     
     print("Starting health tables migration...")

@@ -4,7 +4,7 @@ Scores recipes 0-100 based on medical conditions
 Pure rule-based approach - no ML needed
 """
 
-from app.data.medical_nutrition_rules import MEDICAL_NUTRITION_RULES
+from data.config.medical_nutrition_rules import MEDICAL_NUTRITION_RULES
 from typing import Dict, List
 import re
 

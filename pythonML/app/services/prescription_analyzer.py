@@ -4,10 +4,10 @@ Analyzes prescription text to extract medical conditions and medications
 Uses keyword matching - no ML training needed
 """
 
-from app.data.medical_nutrition_rules import (
-    CONDITION_KEYWORDS,
+from data.config.medical_nutrition_rules import (
     MEDICAL_NUTRITION_RULES,
-    MEDICATION_INTERACTIONS
+    MEDICATION_INTERACTIONS,
+    CONDITION_KEYWORDS
 )
 from typing import Dict, List
 import re

@@ -11,7 +11,7 @@ import random
 class DietService:
     def __init__(self):
         self.model_path = "app/models/diet_model.pkl"
-        self.data_path = "data/diet_recommendations/diet_recommendations_dataset.csv"
+        self.data_path = "data/training/diet_recommendations/diet_recommendations_dataset.csv"
         self.model = None
         self.data = None
         self._load_model()
