@@ -76,7 +76,13 @@ class PrescriptionAnalyzer:
     
     def detect_conditions(self, text: str) -> List[str]:
         """
-        Detect medical conditions using keyword matching
+        Detect medical conditions using keyword matching with word boundaries
+        
+        CRITICAL FIX: Uses regex \b to prevent false matches
+        - 'age' won't match inside 'massage'
+        - 'tea' won't match inside 'team'
+        
+        Also checks for negation ('no diabetes', 'not hypertensive')
         
         Args:
             text: Prescription text (from OCR or manual input)
@@ -88,17 +94,36 @@ class PrescriptionAnalyzer:
         text_lower = text.lower()
         
         for condition, keywords in self.condition_keywords.items():
-            # Check if any keyword matches
+            # Check if any keyword matches with word boundaries
             for keyword in keywords:
-                if keyword in text_lower:
-                    detected.append(condition)
-                    break  # Found this condition, move to next
+                # \b ensures we match whole words only
+                # re.escape prevents special chars from breaking regex
+                pattern = r'\b' + re.escape(keyword) + r'\b'
+                
+                match = re.search(pattern, text_lower)
+                if match:
+                    # Check for negation in preceding context
+                    # Look at 20 characters before the match
+                    start_index = match.start()
+                    preceding_text = text_lower[max(0, start_index - 20):start_index]
+                    
+                    # Skip if negated (e.g., "no diabetes", "not hypertensive")
+                    negation_words = ['no ', 'not ', 'negative ', 'absent ', 'ruled out']
+                    is_negated = any(neg in preceding_text for neg in negation_words)
+                    
+                    if not is_negated:
+                        detected.append(condition)
+                        break  # Found this condition, move to next
         
         return detected
     
     def extract_medications(self, text: str) -> List[Dict]:
         """
-        Extract medications from prescription text
+        Extract medications from prescription text using word boundaries
+        
+        CRITICAL FIX: Prevents partial matches
+        - 'met' won't incorrectly match 'metformin'
+        - 'lose' won't match 'losartan'
         
         Returns:
             List of detected medications with their interactions
@@ -107,14 +132,18 @@ class PrescriptionAnalyzer:
         text_lower = text.lower()
         
         for med_name, med_info in self.medication_db.items():
-            if med_name in text_lower:
+            # Use regex word boundary for exact matching
+            pattern = r'\b' + re.escape(med_name) + r'\b'
+            
+            if re.search(pattern, text_lower):
                 medications.append({
                     'name': med_name.title(),
                     'condition': med_info['condition'],
                     'avoid_with': med_info.get('avoid_with', []),
                     'take_with': med_info.get('take_with', ''),
                     'timing': med_info.get('timing', ''),
-                    'alert': med_info.get('alert', '')
+                    'alert': med_info.get('alert', ''),
+                    'food_notes': med_info.get('food_notes', '')
                 })
         
         return medications

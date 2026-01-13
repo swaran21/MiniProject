@@ -17,9 +17,62 @@ class RecipeHealthScorer:
     def __init__(self):
         self.medical_rules = MEDICAL_NUTRITION_RULES
     
+    def _normalize_ingredient(self, ingredient: str) -> List[str]:
+        """
+        Normalize ingredient to base forms for better matching
+        
+        Examples:
+            'Basmati Rice' -> ['basmati', 'rice']
+            'Brown Sugar' -> ['brown', 'sugar']
+            'Long-grain White Rice' -> ['long', 'grain', 'white', 'rice']
+        
+        Returns:
+            List of normalized tokens
+        """
+        # Remove common measurements and quantities
+        ignore_words = {'cup', 'cups', 'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons',
+                       'tsp', 'tbsp', 'oz', 'ounce', 'ounces', 'pound', 'pounds', 'lb', 'lbs',
+                       'gram', 'grams', 'g', 'kg', 'ml', 'liter', 'liters', 'of', 'chopped',
+                       'diced', 'sliced', 'minced', 'fresh', 'dried', 'frozen', 'canned'}
+        
+        # Tokenize and filter
+        tokens = re.split(r'[\s,\-()]+', ingredient.lower())
+        normalized = [t for t in tokens if t and t not in ignore_words and len(t) > 1]
+        return normalized
+    
+    def _matches_food_item(self, ingredient: str, food_item: str) -> bool:
+        """
+        Check if ingredient contains the food item using smart matching
+        
+        CRITICAL FIX: Handles variations!
+        - 'white rice' matches: 'Basmati Rice', 'Long-grain Rice', 'White Rice'
+        - 'sugar' matches: 'Brown Sugar', 'Cane Sugar', 'Sugar'
+        - BUT 'rice' won't match 'price' (word boundaries)
+        
+        Returns:
+            True if ingredient contains the food item
+        """
+        ingredient_tokens = self._normalize_ingredient(ingredient)
+        food_tokens = self._normalize_ingredient(food_item)
+        
+        # Check each food token with word boundaries
+        for food_token in food_tokens:
+            # Use word boundary to avoid partial matches
+            pattern = r'\b' + re.escape(food_token) + r'\b'
+            
+            # Check if this token appears in the original ingredient
+            if re.search(pattern, ingredient.lower()):
+                return True
+        
+        return False
+    
     def calculate_health_score(self, recipe: Dict, conditions: List[str]) -> int:
         """
         Calculate health score 0-100 for a recipe
+        
+        IMPROVED: Now catches ingredient variations!
+        - 'white rice' restriction catches 'Basmati Rice', 'Jasmine Rice', etc.
+        - Word boundaries prevent false positives
         
         Args:
             recipe: Recipe dict with ingredients, title, instructions
@@ -39,9 +92,6 @@ class RecipeHealthScorer:
         if isinstance(ingredients, str):
             ingredients = [ing.strip() for ing in ingredients.split(';')]
         
-        ingredients_lower = [ing.lower() for ing in ingredients]
-        ingredients_text = ' '.join(ingredients_lower)
-        
         # Check against each condition
         for condition in conditions:
             if condition not in self.medical_rules:
@@ -49,21 +99,20 @@ class RecipeHealthScorer:
                 
             rules = self.medical_rules[condition]
             
-            # Check for restricted foods
+            # Check for restricted foods with improved matching
             for bad_food in rules['foods_to_avoid']:
-                bad_food_lower = bad_food.lower()
-                
-                # Check if bad food appears in any ingredient
-                if any(bad_food_lower in ing for ing in ingredients_lower):
-                    score -= 40  # Heavy penalty for restricted foods
-                    break  # Count each bad food only once
+                # Use smart matching to catch variations
+                for ingredient in ingredients:
+                    if self._matches_food_item(ingredient, bad_food):
+                        score -= 40  # Heavy penalty for restricted foods
+                        break  # Count each bad food only once per ingredient
             
             # Bonus for recommended foods
             for good_food in rules['foods_to_eat']:
-                good_food_lower = good_food.lower()
-                
-                if any(good_food_lower in ing for ing in ingredients_lower):
-                    score += 5  # Small bonus
+                for ingredient in ingredients:
+                    if self._matches_food_item(ingredient, good_food):
+                        score += 5  # Small bonus
+                        break  # Count once
         
         # Clamp score to 0-100
         return max(0, min(100, score))
@@ -90,10 +139,11 @@ class RecipeHealthScorer:
             rules = self.medical_rules[condition]
             condition_name = rules['display_name']
             
-            # Check each ingredient against restrictions
-            for ingredient in ingredients_lower:
+            # Check each ingredient against restrictions with smart matching
+            for ingredient in ingredients:
                 for bad_food in rules['foods_to_avoid']:
-                    if bad_food.lower() in ingredient:
+                    # Use improved matching to catch variations
+                    if self._matches_food_item(ingredient, bad_food):
                         warnings.append({
                             'ingredient': ingredient,
                             'condition': condition_name,
