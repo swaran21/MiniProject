@@ -11,18 +11,48 @@ MEDICAL_NUTRITION_RULES = {
         'duration_days': 90,  # 3-month renewable plans
         
         'foods_to_avoid': [
-            'sugar', 'white rice', 'refined flour', 'maida', 'white bread',
-            'sweet beverages', 'soda', 'fruit juice', 'candy', 'pastries',
-            'processed foods', 'high-carb foods', 'potatoes', 'honey',
-            'sweetened yogurt', 'sweetened cereals'
+            # Sugars (all types)
+            'sugar', 'white sugar', 'brown sugar', 'cane sugar', 'table sugar',
+            'honey', 'maple syrup', 'agave', 'corn syrup',
+            
+            # High-GI Grains & Starches
+            'white rice', 'jasmine rice', 'sticky rice', 'instant rice',
+            'rice noodles', 'rice vermicelli', 'rice paper',  # Added rice noodles!
+            'white bread', 'refined flour', 'maida', 'all-purpose flour',
+            'pasta', 'white pasta', 'noodles',
+            'potatoes', 'mashed potatoes', 'french fries',
+            
+            # Processed/Packaged Foods
+            'sweet beverages', 'soda', 'fruit juice', 'sports drinks',
+            'candy', 'pastries', 'cakes', 'cookies', 'donuts',
+            'sweetened yogurt', 'sweetened cereals', 'granola bars',
+            'processed foods', 'fast food'
         ],
         
         'foods_to_eat': [
-            'whole grains', 'brown rice', 'quinoa', 'oats', 'vegetables',
-            'leafy greens', 'spinach', 'kale', 'broccoli', 'cauliflower',
-            'lean protein', 'chicken breast', 'fish', 'eggs', 'tofu',
-            'legumes', 'lentils', 'chickpeas', 'beans', 'nuts', 'almonds',
-            'berries', 'cinnamon', 'turmeric', 'bitter gourd'
+            # Low-GI Grains (SAFE alternatives to white rice!)
+            'brown rice', 'wild rice', 'black rice', 'red rice',
+            'whole grains', 'quinoa', 'oats', 'barley', 'buckwheat',
+            
+            # Vegetables (High Fiber)
+            'vegetables', 'leafy greens', 'spinach', 'kale', 'broccoli',
+            'cauliflower', 'brussels sprouts', 'bitter gourd', 'bok choy',
+            
+            # Lean Protein
+            'lean protein', 'chicken breast', 'fish', 'salmon', 'tuna',
+            'eggs', 'egg whites', 'tofu', 'tempeh',
+            
+            # Legumes (Low GI, High Protein)
+            'legumes', 'lentils', 'chickpeas', 'beans', 'black beans',
+            
+            # Healthy Fats & Nuts
+            'nuts', 'almonds', 'walnuts', 'chia seeds', 'flax seeds',
+            
+            # Low-GI Fruits
+            'berries', 'strawberries', 'blueberries', 'raspberries',
+            
+            # Beneficial Spices
+            'cinnamon', 'turmeric', 'fenugreek', 'ginger'
         ],
         
         'macro_targets': {
@@ -361,6 +391,58 @@ MEDICAL_NUTRITION_RULES = {
             'Take prescribed supplements',
             'Follow surgeon\'s specific diet orders'
         ]
+    },
+    
+    'celiac': {
+        'display_name': 'Celiac Disease / Gluten Intolerance',
+        'type': 'chronic',
+        'duration_days': 365,  # Lifetime dietary change
+        
+        'foods_to_avoid': [
+            # Gluten-containing grains (PRIMARY CONCERN!)
+            'wheat', 'wheat flour', 'whole wheat', 'wheat bread',
+            'white bread', 'whole wheat bread', 'sourdough bread',
+            'barley', 'rye', 'malt', 'brewer\'s yeast',
+            
+            # Products made with gluten
+            'pasta', 'noodles', 'couscous', 'bulgur',
+            'bread', 'crackers', 'biscuits', 'cookies',
+            'cakes', 'pastries', 'pie crust',
+            'pizza', 'pizza dough',
+            'cereal (most)', 'granola',
+            
+            # Hidden gluten sources
+            'soy sauce', 'teriyaki sauce', 'some sauces',
+            'beer', 'malt vinegar',
+            'processed meats (check labels)'
+        ],
+        
+        'foods_to_eat': [
+            # Gluten-free grains (SAFE!)
+            'rice', 'brown rice', 'white rice', 'wild rice',  # All rice is safe!
+            'quinoa', 'buckwheat', 'millet', 'amaranth',
+            'corn', 'cornmeal', 'polenta',
+            'oats (certified gluten-free)',
+            
+            # Gluten-free products
+            'gluten-free bread', 'gluten-free pasta',
+            'rice noodles', 'rice cakes',
+            
+            # Naturally gluten-free
+            'fruits', 'vegetables', 'potatoes',
+            'lean protein', 'meat', 'poultry', 'fish', 'eggs',
+            'beans', 'legumes', 'nuts', 'seeds',
+            'dairy products (plain)', 'milk', 'cheese', 'yogurt'
+        ],
+        
+        'special_notes': [
+            'ZERO tolerance for gluten - even traces can cause damage',
+            'Always read food labels carefully',
+            'Avoid cross-contamination in kitchen',
+            'Ask about ingredients when eating out',
+            'Look for certified gluten-free labels',
+            'Rice, quinoa, and potatoes are your staples'
+        ]
     }
 }
 
@@ -485,5 +567,12 @@ CONDITION_KEYWORDS = {
         'post operative', 'post-operative', 'post surgery',
         'post-surgery', 'surgical recovery', 'operation',
         'wound healing', 'after surgery'
+    ],
+    
+    'celiac': [
+        'celiac', 'celiac disease', 'coeliac', 'coeliac disease',
+        'gluten intolerance', 'gluten sensitivity', 'gluten allergy',
+        'wheat allergy', 'gluten-free diet', 'avoid gluten',
+        'gluten enteropathy', 'dermatitis herpetiformis'
     ]
 }
