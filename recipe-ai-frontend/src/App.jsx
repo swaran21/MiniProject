@@ -5,6 +5,8 @@ import RecipeComponent from "./components/RecipeComponent";
 import MealPlanComponent from "./components/MealPlanComponent";
 import DietTrackerComponent from "./components/DietTrackerComponent";
 import BrowseRecipes from "./components/BrowseRecipes";
+import PrescriptionAnalyzer from "./components/PrescriptionAnalyzer";
+import MedicalMealPlanner from "./components/MedicalMealPlanner";
 import ChatWidget from "./components/ChatWidget";
 import LoginComponent from "./components/LoginComponent";
 import "./App.css";
@@ -83,7 +85,18 @@ function App() {
           <DietTrackerComponent user={user} />
         )}
         {activeTab === "recipe" && <RecipeComponent user={user} />}
-        {activeTab === "browse" && <BrowseRecipes user={user} />}
+        {activeTab === "browse" && (
+          <BrowseRecipes />
+        )}
+
+        {activeTab === "prescription" && (
+          <PrescriptionAnalyzer />
+        )}
+
+        {activeTab === "medical-meals" && (
+          <MedicalMealPlanner />
+        )}
+
         {activeTab === "mealplan" && (
           <MealPlanComponent user={user} />
         )}

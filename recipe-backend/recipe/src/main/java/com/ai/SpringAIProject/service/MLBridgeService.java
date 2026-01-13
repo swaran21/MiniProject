@@ -178,10 +178,12 @@ public class MLBridgeService {
         String url = "http://localhost:5000/health/generate-meal-plan";
         
         java.util.Map<String, Object> request = new java.util.HashMap<>();
-        if (prescriptionText != null) {
+        
+        // Python endpoint needs at least one of these
+        if (prescriptionText != null && !prescriptionText.isEmpty()) {
             request.put("prescription_text", prescriptionText);
         }
-        if (conditions != null) {
+        if (conditions != null && !conditions.isEmpty()) {
             request.put("conditions", conditions);
         }
         if (userId != null) {
@@ -191,10 +193,13 @@ public class MLBridgeService {
             request.put("duration_days", durationDays);
         }
         
+        System.out.println("Sending to Python: " + request);
+        
         try {
             return restTemplate.postForObject(url, request, Object.class);
         } catch (Exception e) {
             System.err.println("Error generating meal plan: " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }

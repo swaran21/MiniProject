@@ -198,17 +198,24 @@ async def get_recipe_health_score(recipe_id: int, conditions: str):
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 @app.post("/health/generate-meal-plan")
-async def generate_medical_meal_plan(
-    prescription_text: str = None,
-    conditions: list = None,
-    user_id: int = None,
-    duration_days: int = None
-):
+async def generate_medical_meal_plan(request: dict):
     """
     Generate complete medical meal plan
-    Either provide prescription_text OR conditions list
+    Request body: {
+        "prescription_text": str (optional),
+        "conditions": list (optional),
+        "user_id": int (optional),
+        "duration_days": int (optional)
+    }
     """
     try:
+        prescription_text = request.get('prescription_text')
+        conditions = request.get('conditions')
+        user_id = request.get('user_id')
+        duration_days = request.get('duration_days')
+        
+        print(f"Received request: {request}")
+        
         # Analyze prescription if provided
         if prescription_text:
             analysis = prescription_analyzer.analyze(prescription_text, user_id)
@@ -235,6 +242,9 @@ async def generate_medical_meal_plan(
     except HTTPException:
         raise
     except Exception as e:
+        print(f"Meal plan error: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Meal plan error: {str(e)}")
 
 # ===== END HEALTH ENDPOINTS =====

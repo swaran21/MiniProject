@@ -40,6 +40,20 @@ function Navbar({ activeTab, setActiveTab }) {
         >
           Meal Planner
         </button>
+        
+        <button 
+          className={`nav-link ${activeTab === "prescription" ? "active" : ""}`} 
+          onClick={() => setActiveTab("prescription")}
+        >
+          🏥 Prescription
+        </button>
+        
+        <button 
+          className={`nav-link ${activeTab === "medical-meals" ? "active" : ""}`} 
+          onClick={() => setActiveTab("medical-meals")}
+        >
+          🍽️ Medical Meals
+        </button>
       </div>
     </nav>
   );
