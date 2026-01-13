@@ -10,9 +10,9 @@ print("PROCESSING RECIPE JSON FILES")
 print("="*60)
 
 json_files = [
-    ('recipes_raw/recipes_raw_nosource_fn.json', 'FoodNetwork'),
-    ('recipes_raw/recipes_raw_nosource_epi.json', 'Epicurious'),
-    ('recipes_raw/recipes_raw_nosource_ar.json', 'AllRecipes')
+    ('data/raw/recipes_raw/recipes_raw_nosource_fn.json', 'FoodNetwork'),
+    ('data/raw/recipes_raw/recipes_raw_nosource_epi.json', 'Epicurious'),
+    ('data/raw/recipes_raw/recipes_raw_nosource_ar.json', 'AllRecipes')
 ]
 
 all_formatted = []

@@ -11,16 +11,16 @@ print("="*60)
 
 # Load recipe details
 print("\nLoading Recipe_Details.csv...")
-recipes = pd.read_csv('CulinaryDB/01_Recipe_Details.csv')
+recipes = pd.read_csv('data/raw/CulinaryDB/01_Recipe_Details.csv')
 print(f"Loaded {len(recipes)} recipes")
 
 # Load ingredients
 print("Loading Ingredients.csv...")
-ingredients = pd.read_csv('CulinaryDB/02_Ingredients.csv')
+ingredients = pd.read_csv('data/raw/CulinaryDB/02_Ingredients.csv')
 
 # Load recipe-ingredient relationships
 print("Loading Recipe-Ingredients relationships...")
-recipe_ing = pd.read_csv('CulinaryDB/04_Recipe-Ingredients_Aliases.csv')
+recipe_ing = pd.read_csv('data/raw/CulinaryDB/04_Recipe-Ingredients_Aliases.csv')
 
 print("\nProcessing and formatting...")
 formatted_recipes = []

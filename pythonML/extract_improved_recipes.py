@@ -371,8 +371,8 @@ def main():
     print("="*80)
     
     sources = [
-        ('recipes_raw/recipes_raw_nosource_fn.json', 'Food Network'),
-        ('recipes_raw/recipes_raw_nosource_epi.json', 'Epicurious')
+        ('data/raw/recipes_raw/recipes_raw_nosource_fn.json', 'Food Network'),
+        ('data/raw/recipes_raw/recipes_raw_nosource_epi.json', 'Epicurious')
     ]
     
     all_valid_recipes = []

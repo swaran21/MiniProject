@@ -17,7 +17,7 @@ class NutritionService:
         # ALWAYS load defaults first (common prepared foods not in FoodData Central)
         self._load_defaults()
         
-        json_path = "FoodData_Central_foundation_food_json_2025-04-24/FoodData_Central_foundation_food_json_2025-04-24.json"
+        json_path = "data/raw/FoodData_Central_foundation_food_json_2025-04-24/FoodData_Central_foundation_food_json_2025-04-24.json"
         
         if not os.path.exists(json_path):
             print(f"⚠️  FoodData Central not found at {json_path}, using defaults only")

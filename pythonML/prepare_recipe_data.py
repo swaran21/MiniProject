@@ -11,9 +11,9 @@ from pathlib import Path
 def load_recipes():
     """Load all recipes from the 3 JSON files"""
     recipe_files = [
-        'recipes_raw/recipes_raw_nosource_ar.json',
-        'recipes_raw/recipes_raw_nosource_epi.json',
-        'recipes_raw/recipes_raw_nosource_fn.json'
+        'data/raw/recipes_raw/recipes_raw_nosource_ar.json',
+        'data/raw/recipes_raw/recipes_raw_nosource_epi.json',
+        'data/raw/recipes_raw/recipes_raw_nosource_fn.json'
     ]
     
     all_recipes = []
