@@ -252,11 +252,61 @@ class MedicalMealPlanner:
         return reminders
     
     def _generate_shopping_list(self, daily_meals: List[Dict]) -> Dict:
-        """Generate shopping list from all meals"""
+        """
+        Generate comprehensive shopping list from all meals
         
-        ingredient_counts = {}
+        Features:
+        - Parses ingredients and extracts quantities
+        - Aggregates similar ingredients across meals
+        - Categorizes by food type (vegetables, proteins, etc.)
+        - Provides condition-specific shopping tips
+        """
+        from collections import defaultdict
+        import re
         
-        # This is simplified - in production, you'd parse ingredients properly
+        # Categorized ingredient storage
+        categorized_ingredients = {
+            'vegetables': defaultdict(float),
+            'fruits': defaultdict(float),
+            'proteins': defaultdict(float),
+            'grains': defaultdict(float),
+            'dairy': defaultdict(float),
+            'spices_herbs': defaultdict(float),
+            'oils_fats': defaultdict(float),
+            'other': defaultdict(float)
+        }
+        
+        # Category keywords for classification
+        category_map = {
+            'vegetables': ['spinach', 'kale', 'broccoli', 'cauliflower', 'carrot', 'tomato', 
+                          'onion', 'garlic', 'bell pepper', 'cucumber', 'lettuce', 'cabbage',
+                          'zucchini', 'eggplant', 'beans', 'peas', 'corn', 'celery'],
+            'fruits': ['apple', 'banana', 'orange', 'berries', 'strawberry', 'blueberry',
+                      'mango', 'grape', 'lemon', 'lime', 'avocado', 'pineapple'],
+            'proteins': ['chicken', 'fish', 'salmon', 'tuna', 'beef', 'pork', 'tofu',
+                        'tempeh', 'egg', 'lentil', 'chickpea', 'turkey', 'shrimp'],
+            'grains': ['rice', 'quinoa', 'oats', 'bread', 'pasta', 'flour', 'barley',
+                      'wheat', 'cereal', 'noodles'],
+            'dairy': ['milk', 'cheese', 'yogurt', 'butter', 'cream', 'paneer'],
+            'spices_herbs': ['salt', 'pepper', 'cumin', 'turmeric', 'coriander', 'ginger',
+                           'cinnamon', 'basil', 'oregano', 'thyme', 'rosemary', 'chili'],
+            'oils_fats': ['oil', 'olive oil', 'coconut oil', 'ghee', 'butter']
+        }
+        
+        # Measurement conversions to cups (for aggregation)
+        unit_conversion = {
+            'cup': 1.0, 'cups': 1.0,
+            'tablespoon': 0.0625, 'tablespoons': 0.0625, 'tbsp': 0.0625,
+            'teaspoon': 0.0208, 'teaspoons': 0.0208, 'tsp': 0.0208,
+            'ounce': 0.125, 'ounces': 0.125, 'oz': 0.125,
+            'pound': 2.0, 'pounds': 2.0, 'lb': 2.0, 'lbs': 2.0,
+            'gram': 0.00423, 'grams': 0.00423, 'g': 0.00423,
+            'kilogram': 4.23, 'kg': 4.23,
+            'piece': 1.0, 'pieces': 1.0, 'whole': 1.0
+        }
+        
+        # Process all meals
+        recipe_names = set()
         for day in daily_meals:
             for meal_type in ['breakfast', 'lunch', 'dinner', 'snacks']:
                 if meal_type == 'snacks':
@@ -265,15 +315,158 @@ class MedicalMealPlanner:
                     meals = [day[meal_type]]
                 
                 for meal in meals:
-                    # In real implementation, fetch and parse ingredients
-                    # For now, just note the recipe
-                    pass
+                    recipe_names.add(meal['title'])
+                    ingredients_raw = meal.get('ingredients', '')
+                    
+                    # Parse ingredients (format: "2 cups rice; 1 lb chicken; ...")
+                    if isinstance(ingredients_raw, str):
+                        ingredient_list = [ing.strip() for ing in ingredients_raw.split(';')]
+                    else:
+                        ingredient_list = ingredients_raw
+                    
+                    for ingredient in ingredient_list:
+                        if not ingredient:
+                            continue
+                        
+                        # Extract quantity, unit, and ingredient name
+                        parsed = self._parse_ingredient(ingredient)
+                        
+                        if parsed:
+                            quantity, unit, name = parsed
+                            
+                            # Convert to standard unit (cups equivalent)
+                            standard_quantity = quantity * unit_conversion.get(unit.lower(), 1.0)
+                            
+                            # Categorize ingredient
+                            category = self._categorize_ingredient(name, category_map)
+                            
+                            # Add to shopping list (aggregate quantities)
+                            categorized_ingredients[category][name] += standard_quantity
+        
+        # Format shopping list by category
+        shopping_list = {}
+        for category, items in categorized_ingredients.items():
+            if items:  # Only include non-empty categories
+                shopping_list[category] = [
+                    {
+                        'item': item,
+                        'quantity': round(qty, 2),
+                        'unit': 'cups equivalent',
+                        'note': self._get_shopping_tip(item, category)
+                    }
+                    for item, qty in sorted(items.items())
+                ]
+        
+        # Condition-specific recommendations
+        condition_tips = self._get_condition_specific_tips()
         
         return {
-            'note': 'Shopping list will be generated based on selected recipes',
-            'recommendation': 'Focus on fresh vegetables, lean proteins, and whole grains',
-            'avoid': 'Processed foods, high-sugar items, high-sodium snacks'
+            'total_recipes': len(recipe_names),
+            'categories': shopping_list,
+            'condition_recommendations': condition_tips,
+            'general_tips': [
+                'Buy fresh produce at the start of the week',
+                'Choose organic when possible for leafy greens',
+                'Check for whole grain options (brown rice, whole wheat)',
+                'Look for low-sodium versions of canned goods',
+                'Pre-portion proteins for easier meal prep'
+            ],
+            'storage_tips': {
+                'vegetables': 'Store in crisper drawer, use within 5-7 days',
+                'proteins': 'Freeze what you won\'t use within 2 days',
+                'grains': 'Store in airtight containers in cool, dry place',
+                'fruits': 'Most fruits ripen at room temperature first'
+            }
         }
+    
+    def _parse_ingredient(self, ingredient_str: str):
+        """
+        Parse ingredient string like "2 cups rice" into (quantity, unit, name)
+        
+        Returns:
+            tuple: (quantity: float, unit: str, ingredient_name: str) or None
+        """
+        import re
+        
+        # Pattern: optional number, optional unit, ingredient name
+        # Examples: "2 cups rice", "chicken breast", "1 lb chicken", "salt"
+        pattern = r'^(\d+\.?\d*)\s*([a-zA-Z]+)?\s*(.+)$'
+        
+        match = re.match(pattern, ingredient_str.strip())
+        
+        if match:
+            quantity_str, unit, name = match.groups()
+            quantity = float(quantity_str) if quantity_str else 1.0
+            unit = unit if unit else 'piece'
+            name = name.strip().lower()
+            return (quantity, unit, name)
+        else:
+            # No quantity specified, assume 1 unit
+            return (1.0, 'piece', ingredient_str.strip().lower())
+    
+    def _categorize_ingredient(self, ingredient_name: str, category_map: dict) -> str:
+        """Categorize ingredient based on keywords"""
+        ingredient_lower = ingredient_name.lower()
+        
+        for category, keywords in category_map.items():
+            for keyword in keywords:
+                if keyword in ingredient_lower:
+                    return category
+        
+        return 'other'
+    
+    def _get_shopping_tip(self, item: str, category: str) -> str:
+        """Get shopping tip for specific item"""
+        tips = {
+            'vegetables': {
+                'spinach': 'Choose dark green leaves',
+                'tomato': 'Firm and bright red',
+                'broccoli': 'Tight, green florets'
+            },
+            'proteins': {
+                'chicken': 'Skinless, boneless breast preferred',
+                'fish': 'Fresh or frozen wild-caught',
+                'tofu': 'Firm or extra-firm for cooking'
+            },
+            'grains': {
+                'rice': 'Choose brown rice for lower GI',
+                'quinoa': 'Rinse before cooking',
+                'oats': 'Steel-cut or rolled oats'
+            }
+        }
+        
+        return tips.get(category, {}).get(item, 'Choose fresh, quality ingredients')
+    
+    def _get_condition_specific_tips(self) -> List[str]:
+        """Generate shopping tips based on conditions"""
+        tips = []
+        
+        for condition in self.conditions:
+            if condition in self.medical_rules:
+                rules = self.medical_rules[condition]
+                condition_name = rules['display_name']
+                
+                # Add condition-specific shopping guidance
+                if condition == 'diabetes_type2':
+                    tips.append(f"{condition_name}: Focus on low-GI foods (brown rice, whole grains, legumes)")
+                    tips.append(f"{condition_name}: Avoid aisle with sugary snacks and sweetened beverages")
+                
+                elif condition == 'hypertension':
+                    tips.append(f"{condition_name}: Check sodium labels - aim for <140mg per serving")
+                    tips.append(f"{condition_name}: Stock up on potassium-rich foods (bananas, spinach)")
+                
+                elif condition == 'high_cholesterol':
+                    tips.append(f"{condition_name}: Choose lean proteins and fish rich in omega-3")
+                    tips.append(f"{condition_name}: Look for foods with soluble fiber")
+                
+                elif condition == 'celiac':
+                    tips.append(f"{condition_name}: Check all labels for gluten-free certification")
+                    tips.append(f"{condition_name}: Avoid bulk bins (cross-contamination risk)")
+        
+        if not tips:
+            tips.append("Focus on fresh, whole foods over processed items")
+        
+        return tips
     
     def _generate_plan_summary(self, user_analysis: Dict, 
                                duration_days: int, 
