@@ -8,7 +8,7 @@ from app.models import (
 from app.services.recipe_service import RecipeService
 from app.services.meal_service import MealPlanService
 from app.services.diet_service import DietService
-from app.services.chatbot_service import ChatbotService
+from app.services.ai_chatbot_service import create_ai_chatbot
 
 app = FastAPI(title="NutriChef AI - Machine Learning Microservice")
 
@@ -30,8 +30,8 @@ recipe_service = RecipeService()
 meal_service = MealPlanService()
 diet_service = DietService()
 
-# Initialize chatbot service
-chatbot_service = ChatbotService(recipe_service)
+# Initialize AI chatbot service (Gemini-powered)
+chatbot_service = create_ai_chatbot(recipe_service)
 
 # Initialize health services
 from app.services.prescription_analyzer import PrescriptionAnalyzer

@@ -1,10 +1,24 @@
 """
 Test Script for AI Chatbot
 Run this after getting your Gemini API key
+
+Can be run from:
+  - pythonML/tests/ directory: python test_ai_chatbot.py
+  - pythonML/ directory: python tests/test_ai_chatbot.py
 """
 
-from app.services.ai_chatbot_service import create_ai_chatbot
 import os
+import sys
+
+# Add parent directory to path so we can import app module
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, parent_dir)
+
+# Load .env from parent directory (pythonML/)
+from dotenv import load_dotenv
+load_dotenv(os.path.join(parent_dir, '.env'))
+
+from app.services.ai_chatbot_service import create_ai_chatbot
 
 print("=" * 60)
 print("🤖 AI CHATBOT TEST")

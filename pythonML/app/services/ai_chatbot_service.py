@@ -3,7 +3,7 @@ AI-Powered Medical Chatbot using Google Gemini + RAG
 SAFETY: Grounded in medical_nutrition_rules.py with custom domain layer
 """
 
-import google.generativeai as genai
+from google import genai
 from typing import Dict, List, Optional
 import os
 from dotenv import load_dotenv
@@ -27,7 +27,7 @@ class AIChatbotService:
         self.recipe_service = recipe_service
         self.medical_rules = MEDICAL_NUTRITION_RULES
         
-        # Configure Gemini API
+        # Configure Gemini API (new library)
         api_key = os.getenv('GEMINI_API_KEY')
         if not api_key:
             raise ValueError(
@@ -35,18 +35,18 @@ class AIChatbotService:
                 "Get it from: https://makersuite.google.com/app/apikey"
             )
         
-        genai.configure(api_key=api_key)
+        # Create client with new API
+        os.environ['GEMINI_API_KEY'] = api_key  # Set for client auto-detection
+        self.client = genai.Client(api_key=api_key)
         
-        # Use Gemini Pro model
-        self.model = genai.GenerativeModel(
-            'gemini-pro',
-            generation_config={
-                'temperature': 0.7,  # Balance creativity and accuracy
-                'top_p': 0.9,
-                'top_k': 40,
-                'max_output_tokens': 1024,
-            }
-        )
+        # Model configuration
+        self.model_name = 'gemini-3-flash-preview'  # Latest model
+        self.generation_config = {
+            'temperature': 0.7,  # Balance creativity and accuracy
+            'top_p': 0.9,
+            'top_k': 40,
+            'max_output_tokens': 1024,
+        }
         
         # System prompt template
         self.system_prompt_template = """You are **NutriChef AI**, a medical nutrition assistant specialized in personalized meal planning.
@@ -106,7 +106,11 @@ class AIChatbotService:
         
         # Step 4: Generate AI response
         try:
-            response = self.model.generate_content(full_prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=full_prompt,
+                config=self.generation_config
+            )
             ai_response = response.text
             
             # Step 5: Domain Layer Validation
@@ -118,7 +122,7 @@ class AIChatbotService:
                     'reply': self._get_safe_fallback_response(message, user_conditions),
                     'medical_filtered': True,
                     'conditions': user_conditions or [],
-                    'model': 'gemini-pro',
+                    'model': self.model_name,
                     'validation_blocked': True,
                     'blocked_reason': validation['reason']
                 }
@@ -128,12 +132,15 @@ class AIChatbotService:
                 'reply': ai_response,
                 'medical_filtered': user_conditions is not None,
                 'conditions': user_conditions or [],
-                'model': 'gemini-pro',
+                'model': self.model_name,
                 'validation_passed': True
             }
         
         except Exception as e:
             # Fallback to safe error message
+            # Print error for debugging
+            print(f"\n⚠️ API Error: {str(e)}")
+            
             return {
                 'reply': (
                     "I apologize, but I'm having trouble processing your request right now. "
@@ -229,7 +236,7 @@ class AIChatbotService:
         """
         CUSTOM DOMAIN LAYER: Validate AI response for medical safety
         
-        Checks if AI response mentions any restricted foods
+        Checks if AI response RECOMMENDS restricted foods (not just mentions them)
         """
         if not user_conditions:
             return {'is_safe': True, 'reason': None}
@@ -245,29 +252,54 @@ class AIChatbotService:
                     # Use word boundaries to avoid false positives
                     pattern = r'\b' + re.escape(food.lower()) + r'\b'
                     
-                    # Check if AI is RECOMMENDING restricted food
-                    # (not just mentioning it in a warning)
+                    # Check if AI mentions this food
                     if re.search(pattern, response_lower):
-                        # Check context - is it a warning or recommendation?
-                        danger_keywords = ['try', 'use', 'substitute', 'replace', 'have', 'eat']
-                        warning_keywords = ['avoid', 'don\'t', 'not', 'shouldn\'t', 'restrict']
-                        
-                        # Get surrounding context
+                        # Get surrounding context (more context = better detection)
                         match = re.search(pattern, response_lower)
                         if match:
-                            start = max(0, match.start() - 50)
-                            end = min(len(response_lower), match.end() + 50)
+                            start = max(0, match.start() - 100)
+                            end = min(len(response_lower), match.end() + 100)
                             context = response_lower[start:end]
                             
-                            # If danger word near restricted food, block it
-                            has_danger = any(kw in context for kw in danger_keywords)
-                            has_warning = any(kw in context for kw in warning_keywords)
+                            # Positive words (recommending the food)
+                            positive_keywords = [
+                                'try', 'use it', 'eat it', 'have it', 'good choice',
+                                'recommend', 'great option', 'perfect', 'excellent',
+                                'can have', 'is fine', 'is okay', 'go ahead'
+                            ]
                             
-                            if has_danger and not has_warning:
+                            # Negative words (warning against the food)
+                            negative_keywords = [
+                                'avoid', 'don\'t', 'do not', 'not', 'shouldn\'t',
+                                'should not', 'restrict', 'stay away', 'skip',
+                                'eliminate', 'remove', 'cut out', 'dangerous',
+                                'harmful', 'risky', 'problematic', 'bad', 'unsafe',
+                                'instead of'  # KEY: "instead of X" means X is bad!
+                            ]
+                            
+                            # More sophisticated check
+                            has_positive = any(kw in context for kw in positive_keywords)
+                            has_negative = any(kw in context for kw in negative_keywords)
+                            
+                            # Special case: Check for "instead of [restricted food]" pattern
+                            # This is ALWAYS a warning, never a recommendation
+                            if f'instead of {food.lower()}' in response_lower:
+                                # This is safe - AI is recommending alternatives
+                                continue
+                            
+                            # BLOCK only if recommending WITHOUT warning
+                            if has_positive and not has_negative:
+                                print(f"\n🛡️ VALIDATION BLOCKED: '{food}' for {self.medical_rules[condition]['display_name']}")
+                                print(f"   Context: ...{context}...")
+                                print(f"   Positive keywords found: {has_positive}")
+                                print(f"   Negative keywords found: {has_negative}")
+                                
                                 return {
                                     'is_safe': False,
-                                    'reason': f"AI suggested restricted food '{food}' for {self.medical_rules[condition]['display_name']}"
+                                    'reason': f"AI recommended restricted food '{food}' for {self.medical_rules[condition]['display_name']}"
                                 }
+                            
+                            # If just mentioning or warning, that's OK
         
         return {'is_safe': True, 'reason': None}
     
