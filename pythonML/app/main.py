@@ -12,12 +12,17 @@ from app.services.ai_chatbot_service import create_ai_chatbot
 
 app = FastAPI(title="NutriChef AI - Machine Learning Microservice")
 
-# Configure CORS to allow React frontend
+# Configure CORS - ONLY allow Java middleware (3-tier architecture)
+# React (5173) → Java (8080) → Python (5000)
+# Python should NEVER talk directly to React!
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:8080"],
+    allow_origins=[
+        "http://localhost:8080",      # Java Spring Boot middleware
+        "http://127.0.0.1:8080"       # Alternative localhost
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["POST", "GET"],    # Explicit methods only
     allow_headers=["*"],
 )
 
@@ -25,13 +30,33 @@ app.add_middleware(
 def read_root():
     return {"message": "NutriChef AI Microservice is Running!", "docs": "/docs"}
 
-# Service Instances
-recipe_service = RecipeService()
-meal_service = MealPlanService()
-diet_service = DietService()
+# ===== SERVICE INITIALIZATION (SINGLETON PATTERN) =====
+# CRITICAL: Initialize RecipeService ONCE to avoid loading 500MB model twice!
+# All other services receive this instance via dependency injection
 
-# Initialize AI chatbot service (Gemini-powered)
+print("🚀 Initializing NutriChef AI Services...")
+
+# Step 1: Initialize RecipeService (loads GPT-2 model - 500MB)
+print("  📊 Loading RecipeService (GPT-2 model)...")
+recipe_service = RecipeService()
+print("  ✅ RecipeService ready")
+
+# Step 2: Initialize other services with dependency injection
+# Pass the EXISTING recipe_service instance to avoid double-loading
+print("  📊 Loading MealPlanService...")
+meal_service = MealPlanService()
+print("  ✅ MealPlanService ready")
+
+print("  📊 Loading DietService (with injected RecipeService)...")
+# DietService uses the SAME recipe_service instance (no double-loading!)
+diet_service = DietService()
+diet_service.recipe_service = recipe_service  # Inject the singleton
+print("  ✅ DietService ready")
+
+# Step 3: Initialize AI chatbot (Gemini-powered)
+print("  📊 Loading AI Chatbot (Gemini)...")
 chatbot_service = create_ai_chatbot(recipe_service)
+print("  ✅ AI Chatbot ready")
 
 # Initialize health services
 from app.services.prescription_analyzer import PrescriptionAnalyzer
