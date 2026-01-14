@@ -17,6 +17,8 @@ Create `.env` file in `pythonML/` directory:
 GEMINI_API_KEY=AIza...your_actual_key_here
 ```
 
+*Note: Never commit `.env` file - it's already in `.gitignore`*
+
 ### Step 3: Install Dependencies
 
 ```bash

@@ -87,6 +87,7 @@ env/
 venv/
 ENV/
 .venv/
+.env
 .Python
 
 # Distribution / packaging
