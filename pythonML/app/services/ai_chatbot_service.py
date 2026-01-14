@@ -4,6 +4,7 @@ SAFETY: Grounded in medical_nutrition_rules.py with custom domain layer
 """
 
 from google import genai
+from google.genai.types import HarmCategory, HarmBlockThreshold
 from typing import Dict, List, Optional
 import os
 from dotenv import load_dotenv
@@ -17,10 +18,11 @@ class AIChatbotService:
     """
     Generative AI chatbot with medical safety through RAG + Custom Domain Layer
     
-    Architecture:
-    1. RAG: Inject medical rules into context
-    2. Gemini API: Generate natural language responses
-    3. Custom Domain Layer: Safety validation + domain models
+    Architecture (Defense-in-Depth):
+    1. RAG: Inject medical rules into context (grounds the model)
+    2. Native Safety: Gemini's built-in content filters
+    3. System Instruction: Explicit safety rules in prompt
+    4. Custom Validation: Regex guardrails as emergency brake
     """
     
     def __init__(self, recipe_service=None):
@@ -40,7 +42,21 @@ class AIChatbotService:
         self.client = genai.Client(api_key=api_key)
         
         # Model configuration
-        self.model_name = 'gemini-3-flash-preview'  # Latest model
+        self.model_name = 'gemini-2.0-flash-exp'  # Latest model
+        
+        # Native Safety Settings (Layer 2 of Defense-in-Depth)
+        # Block dangerous medical misinformation at the source
+        self.safety_settings = [
+            {
+                "category": HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                "threshold": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+            },
+            {
+                "category": HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                "threshold": HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+            }
+        ]
+        
         self.generation_config = {
             'temperature': 0.7,  # Balance creativity and accuracy
             'top_p': 0.9,
@@ -101,19 +117,26 @@ class AIChatbotService:
         else:
             context['recipes_context'] = "No specific recipes searched."
         
-        # Step 3: Build full prompt with context
-        full_prompt = self._build_prompt(message, context)
+        # Step 3: Build system instruction (separate from user message)
+        system_instruction = self._build_system_instruction(context)
         
-        # Step 4: Generate AI response
+        # Step 4: Generate AI response with native safety
         try:
             response = self.client.models.generate_content(
                 model=self.model_name,
-                contents=full_prompt,
-                config=self.generation_config
+                contents=message,  # Only user message (prevents prompt injection)
+                config={
+                    'temperature': 0.7,
+                    'top_p': 0.9,
+                    'top_k': 40,
+                    'max_output_tokens': 1024,
+                    'system_instruction': system_instruction,  # Native system prompt
+                    'safety_settings': self.safety_settings   # Native safety filters
+                }
             )
             ai_response = response.text
             
-            # Step 5: Domain Layer Validation
+            # Step 5: Domain Layer Validation (Emergency Brake)
             validation = self._validate_response(ai_response, user_conditions or [])
             
             if not validation['is_safe']:
@@ -197,17 +220,14 @@ class AIChatbotService:
             'rules_context': rules_text
         }
     
-    def _build_prompt(self, user_message: str, context: Dict) -> str:
+    def _build_system_instruction(self, context: Dict) -> str:
         """
-        Build complete prompt with system instructions + context + user message
+        Build system instruction with context (separate from user message)
+        This prevents prompt injection attacks
         """
-        # Inject context into system prompt
-        system_with_context = self.system_prompt_template.format(**context)
-        
-        # Combine system + user message
-        full_prompt = f"{system_with_context}\n\n**User Question:**\n{user_message}\n\n**Your Response:**"
-        
-        return full_prompt
+        # Inject context into system prompt template
+        system_instruction = self.system_prompt_template.format(**context)
+        return system_instruction
     
     def _is_recipe_query(self, message: str) -> bool:
         """Check if user is asking for recipes"""
@@ -236,7 +256,7 @@ class AIChatbotService:
         """
         CUSTOM DOMAIN LAYER: Validate AI response for medical safety
         
-        Checks if AI response RECOMMENDS restricted foods (not just mentions them)
+        Emergency Brake: Blocks dangerous recommendations using regex guardrails
         """
         if not user_conditions:
             return {'is_safe': True, 'reason': None}
@@ -254,52 +274,52 @@ class AIChatbotService:
                     
                     # Check if AI mentions this food
                     if re.search(pattern, response_lower):
-                        # Get surrounding context (more context = better detection)
+                        # Get match position
                         match = re.search(pattern, response_lower)
                         if match:
-                            start = max(0, match.start() - 100)
-                            end = min(len(response_lower), match.end() + 100)
-                            context = response_lower[start:end]
+                            # Look at 10 words (50 chars) before the forbidden word
+                            start = max(0, match.start() - 50)
+                            context_before = response_lower[start:match.start()]
                             
-                            # Positive words (recommending the food)
-                            positive_keywords = [
-                                'try', 'use it', 'eat it', 'have it', 'good choice',
-                                'recommend', 'great option', 'perfect', 'excellent',
-                                'can have', 'is fine', 'is okay', 'go ahead'
+                            # Safe prefixes (allow the word to appear in warnings)
+                            safe_prefixes = [
+                                'avoid', 'no ', 'not', 'don\'t', 'do not',
+                                'free of', 'free from', 'without', 'instead of',
+                                'swap', 'replace', 'substitute', 'skip',
+                                'eliminate', 'stay away', 'steer clear',
+                                'cut out', 'remove', 'dangerous', 'harmful'
                             ]
                             
-                            # Negative words (warning against the food)
-                            negative_keywords = [
-                                'avoid', 'don\'t', 'do not', 'not', 'shouldn\'t',
-                                'should not', 'restrict', 'stay away', 'skip',
-                                'eliminate', 'remove', 'cut out', 'dangerous',
-                                'harmful', 'risky', 'problematic', 'bad', 'unsafe',
-                                'instead of'  # KEY: "instead of X" means X is bad!
-                            ]
+                            # Check if ANY safe prefix appears before the word
+                            has_safe_prefix = any(prefix in context_before for prefix in safe_prefixes)
                             
-                            # More sophisticated check
-                            has_positive = any(kw in context for kw in positive_keywords)
-                            has_negative = any(kw in context for kw in negative_keywords)
-                            
-                            # Special case: Check for "instead of [restricted food]" pattern
-                            # This is ALWAYS a warning, never a recommendation
-                            if f'instead of {food.lower()}' in response_lower:
-                                # This is safe - AI is recommending alternatives
+                            if has_safe_prefix:
+                                # This is a warning, not a recommendation - SAFE
                                 continue
                             
-                            # BLOCK only if recommending WITHOUT warning
-                            if has_positive and not has_negative:
+                            # No safe prefix found - AI might be recommending it
+                            # Double-check with positive keywords
+                            positive_keywords = [
+                                'try', 'use', 'eat', 'have', 'good choice',
+                                'recommend', 'great option', 'excellent', 'perfect'
+                            ]
+                            
+                            # Get context after the word too
+                            end = min(len(response_lower), match.end() + 50)
+                            context_after = response_lower[match.end():end]
+                            full_context = context_before + response_lower[match.start():match.end()] + context_after
+                            
+                            has_recommendation = any(kw in full_context for kw in positive_keywords)
+                            
+                            if has_recommendation:
+                                # BLOCK: AI is recommending restricted food
                                 print(f"\n🛡️ VALIDATION BLOCKED: '{food}' for {self.medical_rules[condition]['display_name']}")
-                                print(f"   Context: ...{context}...")
-                                print(f"   Positive keywords found: {has_positive}")
-                                print(f"   Negative keywords found: {has_negative}")
+                                print(f"   Context: ...{full_context}...")
                                 
                                 return {
                                     'is_safe': False,
                                     'reason': f"AI recommended restricted food '{food}' for {self.medical_rules[condition]['display_name']}"
                                 }
-                            
-                            # If just mentioning or warning, that's OK
         
         return {'is_safe': True, 'reason': None}
     
