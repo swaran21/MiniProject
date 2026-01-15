@@ -1,5 +1,6 @@
 package com.ai.SpringAIProject.service;
 
+import com.ai.SpringAIProject.dto.*;
 import com.ai.SpringAIProject.model.MealPlan;
 import com.ai.SpringAIProject.model.MealPlanDay;
 import com.ai.SpringAIProject.model.SnackItem;
@@ -16,17 +17,17 @@ import java.util.stream.Collectors;
  * PRODUCTION-READY Service for managing meal plans
  * 
  * Features:
- * - Parses Python's JSON response and persists to PostgreSQL
+ * - Type-safe DTOs for all operations
  * - FULL MACROS INTEGRATION (Protein, Carbs, Fats) - handles 4 input formats!
  * - Uses BOTH repositories (cascade for saves, dayRepository for queries)
  * - Automatic macros estimation from calories
- * - Complete round-trip JSON conversion
+ * - Complete round-trip DTO ↔ Entity conversion
  */
 @Service
 public class MealPlanService {
     
     private final MealPlanRepository mealPlanRepository;
-    private final MealPlanDayRepository mealPlanDayRepository;  // NOW ACTUALLY USED!
+    private final MealPlanDayRepository mealPlanDayRepository;
     
     public MealPlanService(MealPlanRepository mealPlanRepository, 
                           MealPlanDayRepository mealPlanDayRepository) {
@@ -35,16 +36,17 @@ public class MealPlanService {
     }
     
     /**
-     * Save a meal plan from Python's JSON response
+     * Save a meal plan using typed DTO
+     * 
+     * @param request The SaveMealPlanRequest DTO
+     * @return MealPlanResponse DTO
      */
     @Transactional
-    public MealPlan saveMealPlan(Map<String, Object> pythonResponse, Long userId) {
-        String planId = (String) pythonResponse.getOrDefault("plan_id", generatePlanId());
-        Integer durationDays = (Integer) pythonResponse.get("duration_days");
-        String summary = (String) pythonResponse.get("summary");
+    public MealPlanResponse saveMealPlan(SaveMealPlanRequest request) {
+        Long userId = request.getUserId();
+        SaveMealPlanRequest.MealPlanDataDTO planData = request.getPlanData();
         
-        @SuppressWarnings("unchecked")
-        List<String> conditions = (List<String>) pythonResponse.getOrDefault("conditions", new ArrayList<>());
+        String planId = planData.getPlanId() != null ? planData.getPlanId() : generatePlanId();
         
         // Deactivate old plan if exists
         mealPlanRepository.findActiveByUserId(userId).ifPresent(oldPlan -> {
@@ -56,136 +58,115 @@ public class MealPlanService {
         MealPlan mealPlan = new MealPlan();
         mealPlan.setPlanId(planId);
         mealPlan.setUserId(userId);
-        mealPlan.setConditions(conditions);
-        mealPlan.setDurationDays(durationDays);
+        mealPlan.setConditions(planData.getConditions());
+        mealPlan.setDurationDays(planData.getDurationDays());
         mealPlan.setStartDate(LocalDate.now());
-        mealPlan.setEndDate(LocalDate.now().plusDays(durationDays - 1));
+        mealPlan.setEndDate(LocalDate.now().plusDays(planData.getDurationDays() - 1));
         mealPlan.setIsActive(true);
-        mealPlan.setSummary(summary);
+        mealPlan.setSummary(planData.getSummary());
         mealPlan.setTotalDaysCompleted(0);
         
-        // Parse and add days
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> dailyMeals = (List<Map<String, Object>>) pythonResponse.get("daily_meals");
-        
-        if (dailyMeals != null) {
-            for (Map<String, Object> dayData : dailyMeals) {
-                MealPlanDay day = parseDayFromJson(dayData, mealPlan);
+        // Parse and add days from DTO
+        if (planData.getDailyMeals() != null) {
+            for (SaveMealPlanRequest.DailyMealDTO dayDTO : planData.getDailyMeals()) {
+                MealPlanDay day = parseDayFromDTO(dayDTO, mealPlan);
                 mealPlan.addDay(day);
             }
         }
         
-        return mealPlanRepository.save(mealPlan); // Cascade saves days
+        MealPlan savedPlan = mealPlanRepository.save(mealPlan);
+        return toMealPlanResponse(savedPlan);
     }
     
     /**
-     * Parse day with FULL MACROS extraction
+     * Parse day from DTO with FULL MACROS extraction
      */
-    private MealPlanDay parseDayFromJson(Map<String, Object> dayData, MealPlan mealPlan) {
+    private MealPlanDay parseDayFromDTO(SaveMealPlanRequest.DailyMealDTO dayDTO, MealPlan mealPlan) {
         MealPlanDay day = new MealPlanDay();
         day.setMealPlan(mealPlan);
-        day.setDayNumber((Integer) dayData.get("day"));
+        day.setDayNumber(dayDTO.getDay());
         
         // Set date
-        String dateStr = (String) dayData.get("date");
-        day.setDayDate(dateStr != null ? LocalDate.parse(dateStr) : 
-            mealPlan.getStartDate().plusDays(day.getDayNumber() - 1));
+        day.setDayDate(dayDTO.getDate() != null ? LocalDate.parse(dayDTO.getDate()) : 
+            mealPlan.getStartDate().plusDays(dayDTO.getDay() - 1));
         
-        // Parse meals with macros
-        @SuppressWarnings("unchecked")
-        Map<String, Object> breakfast = (Map<String, Object>) dayData.get("breakfast");
-        day.setBreakfastRecipeId((Integer) breakfast.get("recipe_id"));
-        day.setBreakfastTitle((String) breakfast.get("title"));
-        day.setBreakfastCalories((Integer) breakfast.get("calories"));
-        day.setBreakfastHealthScore((Integer) breakfast.getOrDefault("health_score", 100));
-        day.setBreakfastMacros(extractAndFormatMacros(breakfast));
+        // Parse breakfast
+        day.setBreakfastRecipeId(dayDTO.getBreakfast().getRecipeId());
+        day.setBreakfastTitle(dayDTO.getBreakfast().getTitle());
+        day.setBreakfastCalories(dayDTO.getBreakfast().getCalories());
+        day.setBreakfastHealthScore(dayDTO.getBreakfast().getHealthScore() != null ? 
+            dayDTO.getBreakfast().getHealthScore() : 100);
+        day.setBreakfastMacros(extractMacrosFromDTO(dayDTO.getBreakfast()));
         
-        @SuppressWarnings("unchecked")
-        Map<String, Object> lunch = (Map<String, Object>) dayData.get("lunch");
-        day.setLunchRecipeId((Integer) lunch.get("recipe_id"));
-        day.setLunchTitle((String) lunch.get("title"));
-        day.setLunchCalories((Integer) lunch.get("calories"));
-        day.setLunchHealthScore((Integer) lunch.getOrDefault("health_score", 100));
-        day.setLunchMacros(extractAndFormatMacros(lunch));
+        // Parse lunch
+        day.setLunchRecipeId(dayDTO.getLunch().getRecipeId());
+        day.setLunchTitle(dayDTO.getLunch().getTitle());
+        day.setLunchCalories(dayDTO.getLunch().getCalories());
+        day.setLunchHealthScore(dayDTO.getLunch().getHealthScore() != null ? 
+            dayDTO.getLunch().getHealthScore() : 100);
+        day.setLunchMacros(extractMacrosFromDTO(dayDTO.getLunch()));
         
-        @SuppressWarnings("unchecked")
-        Map<String, Object> dinner = (Map<String, Object>) dayData.get("dinner");
-        day.setDinnerRecipeId((Integer) dinner.get("recipe_id"));
-        day.setDinnerTitle((String) dinner.get("title"));
-        day.setDinnerCalories((Integer) dinner.get("calories"));
-        day.setDinnerHealthScore((Integer) dinner.getOrDefault("health_score", 100));
-        day.setDinnerMacros(extractAndFormatMacros(dinner));
+        // Parse dinner
+        day.setDinnerRecipeId(dayDTO.getDinner().getRecipeId());
+        day.setDinnerTitle(dayDTO.getDinner().getTitle());
+        day.setDinnerCalories(dayDTO.getDinner().getCalories());
+        day.setDinnerHealthScore(dayDTO.getDinner().getHealthScore() != null ? 
+            dayDTO.getDinner().getHealthScore() : 100);
+        day.setDinnerMacros(extractMacrosFromDTO(dayDTO.getDinner()));
         
         // Parse snacks
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> snacksData = (List<Map<String, Object>>) dayData.get("snacks");
-        if (snacksData != null && !snacksData.isEmpty()) {
-            day.setSnacks(snacksData.stream()
-                .map(this::parseSnackFromJson)
+        if (dayDTO.getSnacks() != null && !dayDTO.getSnacks().isEmpty()) {
+            day.setSnacks(dayDTO.getSnacks().stream()
+                .map(this::parseSnackFromDTO)
                 .collect(Collectors.toList()));
         }
         
-        day.setTotalCalories((Integer) dayData.get("total_calories"));
-        day.setTotalMacros(calculateTotalMacrosForDay(day));  // Calculate!
+        day.setTotalCalories(dayDTO.getTotalCalories());
+        day.setTotalMacros(calculateTotalMacrosForDay(day));
         
         return day;
     }
     
-    private SnackItem parseSnackFromJson(Map<String, Object> snackData) {
+    private SnackItem parseSnackFromDTO(SaveMealPlanRequest.MealDTO mealDTO) {
         SnackItem snack = new SnackItem();
-        snack.setRecipeId((Integer) snackData.get("recipe_id"));
-        snack.setTitle((String) snackData.get("title"));
-        snack.setCalories((Integer) snackData.get("calories"));
-        snack.setHealthScore((Integer) snackData.getOrDefault("health_score", 100));
-        snack.setMacros(extractAndFormatMacros(snackData));
+        snack.setRecipeId(mealDTO.getRecipeId());
+        snack.setTitle(mealDTO.getTitle());
+        snack.setCalories(mealDTO.getCalories());
+        snack.setHealthScore(mealDTO.getHealthScore() != null ? mealDTO.getHealthScore() : 100);
+        snack.setMacros(extractMacrosFromDTO(mealDTO));
         return snack;
     }
     
     /**
-     * SMART MACROS EXTRACTION - Handles 4 formats:
-     * 1. "P:20 C:40 F:15" (already formatted)
-     * 2. {protein: 20, carbs: 40, fats: 15} (individual fields)
-     * 3. {macros: {protein: 20, carbs: 40, fats: 15}} (nested)
-     * 4. Estimate from calories (30/40/30 ratio)
+     * Extract macros from MealDTO
+     * Supports: macros string, individual fields (protein/carbs/fats), or estimates from calories
      */
-    private String extractAndFormatMacros(Map<String, Object> mealData) {
-        // Format 1: Already formatted string
-        if (mealData.containsKey("macros") && mealData.get("macros") instanceof String) {
-            String macros = (String) mealData.get("macros");
-            if (macros != null && macros.matches("P:\\d+ C:\\d+ F:\\d+")) {
-                return macros;
+    private String extractMacrosFromDTO(SaveMealPlanRequest.MealDTO mealDTO) {
+        // Format 1: Already has macros string
+        if (mealDTO.getMacros() != null && !mealDTO.getMacros().isEmpty()) {
+            if (mealDTO.getMacros().matches("P:\\d+ C:\\d+ F:\\d+")) {
+                return mealDTO.getMacros();
             }
         }
         
         // Format 2: Individual fields
-        if (mealData.containsKey("protein") && mealData.containsKey("carbs") && mealData.containsKey("fats")) {
+        if (mealDTO.getProtein() != null && mealDTO.getCarbs() != null && mealDTO.getFats() != null) {
             return String.format("P:%d C:%d F:%d", 
-                getIntValue(mealData.get("protein")),
-                getIntValue(mealData.get("carbs")),
-                getIntValue(mealData.get("fats")));
+                mealDTO.getProtein(), mealDTO.getCarbs(), mealDTO.getFats());
         }
         
-        // Format 3: Nested object
-        if (mealData.containsKey("macros") && mealData.get("macros") instanceof Map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> macrosObj = (Map<String, Object>) mealData.get("macros");
-            return String.format("P:%d C:%d F:%d",
-                getIntValue(macrosObj.get("protein")),
-                getIntValue(macrosObj.get("carbs")),
-                getIntValue(macrosObj.get("fats")));
-        }
-        
-        // Format 4: Estimate from calories (30% protein, 40% carbs, 30% fats)
-        if (mealData.containsKey("calories")) {
-            int calories = getIntValue(mealData.get("calories"));
-            int protein = (int) Math.round((calories * 0.30) / 4.0);  // 4 cal/g
-            int carbs = (int) Math.round((calories * 0.40) / 4.0);    // 4 cal/g
-            int fats = (int) Math.round((calories * 0.30) / 9.0);     // 9 cal/g
+        // Format 3: Estimate from calories (30/40/30 ratio)
+        if (mealDTO.getCalories() != null) {
+            int protein = (int) Math.round((mealDTO.getCalories() * 0.30) / 4.0);
+            int carbs = (int) Math.round((mealDTO.getCalories() * 0.40) / 4.0);
+            int fats = (int) Math.round((mealDTO.getCalories() * 0.30) / 9.0);
             return String.format("P:%d C:%d F:%d", protein, carbs, fats);
         }
         
         return null;
     }
+    
+    // ===== MACROS CALCULATION =====
     
     /**
      * Calculate TOTAL macros for entire day (breakfast + lunch + dinner + snacks)
@@ -254,37 +235,43 @@ public class MealPlanService {
         return 0;
     }
     
-    // ===== QUERY METHODS - NOW USING dayRepository! =====
+    // ===== QUERY METHODS - Return DTOs =====
     
     @Transactional(readOnly = true)
-    public Optional<MealPlan> getActivePlan(Long userId) {
-        Optional<MealPlan> planOpt = mealPlanRepository.findActiveByUserId(userId);
-        planOpt.ifPresent(plan -> plan.getDays().size()); // Force load
-        return planOpt;
+    public Optional<MealPlanResponse> getActivePlan(Long userId) {
+        return mealPlanRepository.findActiveByUserId(userId)
+            .map(plan -> {
+                plan.getDays().size(); // Force load
+                return toMealPlanResponse(plan);
+            });
     }
     
     @Transactional(readOnly = true)
-    public Optional<MealPlan> getPlanById(String planId) {
-        Optional<MealPlan> planOpt = mealPlanRepository.findById(planId);
-        planOpt.ifPresent(plan -> plan.getDays().size());
-        return planOpt;
+    public Optional<MealPlanResponse> getPlanById(String planId) {
+        return mealPlanRepository.findById(planId)
+            .map(plan -> {
+                plan.getDays().size();
+                return toMealPlanResponse(plan);
+            });
     }
     
     /**
      * Get specific day - USING dayRepository!
      */
-    @Transactional(readOnly = true)
-    public Optional<MealPlanDay> getDayByNumber(String planId, Integer dayNumber) {
-        return mealPlanDayRepository.findByPlanIdAndDayNumber(planId, dayNumber);
+    @Transactional(readOnly =true)
+    public Optional<MealPlanDayResponse> getDayByNumber(String planId, Integer dayNumber) {
+        return mealPlanDayRepository.findByPlanIdAndDayNumber(planId, dayNumber)
+            .map(this::toDayResponse);
     }
     
     /**
      * Get TODAY's meals - USING dayRepository!
      */
     @Transactional(readOnly = true)
-    public Optional<MealPlanDay> getTodaysMeals(Long userId) {
+    public Optional<MealPlanDayResponse> getTodaysMeals(Long userId) {
         return mealPlanRepository.findActiveByUserId(userId)
-            .flatMap(plan -> mealPlanDayRepository.findByPlanIdAndDate(plan.getPlanId(), LocalDate.now()));
+            .flatMap(plan -> mealPlanDayRepository.findByPlanIdAndDate(plan.getPlanId(), LocalDate.now()))
+            .map(this::toDayResponse);
     }
     
     @Transactional
@@ -307,83 +294,81 @@ public class MealPlanService {
             .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
     }
     
+    // ===== DTO MAPPERS =====
+    
     /**
-     * Convert to JSON with FULL MACROS BREAKDOWN
+     * Convert MealPlan entity to MealPlanResponse DTO
      */
-    public Map<String, Object> toJsonResponse(MealPlan plan) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("plan_id", plan.getPlanId());
-        response.put("user_id", plan.getUserId());
-        response.put("conditions", plan.getConditions());
-        response.put("duration_days", plan.getDurationDays());
-        response.put("start_date", plan.getStartDate().toString());
-        response.put("end_date", plan.getEndDate().toString());
-        response.put("is_active", plan.getIsActive());
-        response.put("summary", plan.getSummary());
-        response.put("total_days_completed", plan.getTotalDaysCompleted());
+    private MealPlanResponse toMealPlanResponse(MealPlan plan) {
+        MealPlanResponse response = new MealPlanResponse();
+        response.setPlanId(plan.getPlanId());
+        response.setUserId(plan.getUserId());
+        response.setConditions(plan.getConditions());
+        response.setDurationDays(plan.getDurationDays());
+        response.setStartDate(plan.getStartDate().toString());
+        response.setEndDate(plan.getEndDate().toString());
+        response.setIsActive(plan.getIsActive());
+        response.setSummary(plan.getSummary());
+        response.setTotalDaysCompleted(plan.getTotalDaysCompleted());
         
-        List<Map<String, Object>> dailyMeals = plan.getDays().stream()
+        List<MealPlanDayResponse> dailyMeals = plan.getDays().stream()
             .sorted(Comparator.comparing(MealPlanDay::getDayNumber))
-            .map(this::dayToJson)
+            .map(this::toDayResponse)
             .collect(Collectors.toList());
-        response.put("daily_meals", dailyMeals);
+        response.setDailyMeals(dailyMeals);
         
         return response;
     }
     
-    private Map<String, Object> dayToJson(MealPlanDay day) {
-        Map<String, Object> json = new HashMap<>();
-        json.put("day", day.getDayNumber());
-        json.put("date", day.getDayDate().toString());
+    /**
+     * Convert MealPlanDay entity to MealPlanDayResponse DTO
+     */
+    private MealPlanDayResponse toDayResponse(MealPlanDay day) {
+        MealPlanDayResponse response = new MealPlanDayResponse();
+        response.setDay(day.getDayNumber());
+        response.setDate(day.getDayDate().toString());
         
-        // Each meal with macros STRING and BREAKDOWN object
-        json.put("breakfast", mealToJson(
+        // Convert meals
+        response.setBreakfast(toMealResponse(
             day.getBreakfastRecipeId(), day.getBreakfastTitle(),
             day.getBreakfastCalories(), day.getBreakfastHealthScore(), day.getBreakfastMacros()));
         
-        json.put("lunch", mealToJson(
+        response.setLunch(toMealResponse(
             day.getLunchRecipeId(), day.getLunchTitle(),
             day.getLunchCalories(), day.getLunchHealthScore(), day.getLunchMacros()));
         
-        json.put("dinner", mealToJson(
+        response.setDinner(toMealResponse(
             day.getDinnerRecipeId(), day.getDinnerTitle(),
             day.getDinnerCalories(), day.getDinnerHealthScore(), day.getDinnerMacros()));
         
+        // Convert snacks
         if (day.getSnacks() != null && !day.getSnacks().isEmpty()) {
-            json.put("snacks", day.getSnacks().stream()
-                .map(s -> mealToJson(s.getRecipeId(), s.getTitle(), s.getCalories(), 
-                    s.getHealthScore(), s.getMacros()))
+            response.setSnacks(day.getSnacks().stream()
+                .map(snack -> toMealResponse(snack.getRecipeId(), snack.getTitle(),
+                    snack.getCalories(), snack.getHealthScore(), snack.getMacros()))
                 .collect(Collectors.toList()));
         }
         
-        json.put("total_calories", day.getTotalCalories());
-        json.put("total_macros", day.getTotalMacros());
-        json.put("total_macros_breakdown", parseMacrosToObject(day.getTotalMacros()));
+        // Totals
+        response.setTotalCalories(day.getTotalCalories());
+        response.setTotalMacros(day.getTotalMacros());
+        response.setTotalMacrosBreakdown(MacrosDTO.fromString(day.getTotalMacros()));
         
-        return json;
-    }
-    
-    private Map<String, Object> mealToJson(Integer recipeId, String title, Integer calories, 
-                                           Integer healthScore, String macros) {
-        Map<String, Object> meal = new HashMap<>();
-        meal.put("recipe_id", recipeId);
-        meal.put("title", title);
-        meal.put("calories", calories);
-        meal.put("health_score", healthScore);
-        meal.put("macros", macros);
-        meal.put("macros_breakdown", parseMacrosToObject(macros));
-        return meal;
+        return response;
     }
     
     /**
-     * Parse "P:20 C:40 F:15" → {protein: 20, carbs: 40, fats: 15}
+     * Convert meal data to MealResponse DTO
      */
-    private Map<String, Integer> parseMacrosToObject(String macros) {
-        Map<String, Integer> result = new HashMap<>();
-        int[] parsed = parseMacrosString(macros);
-        result.put("protein", parsed[0]);
-        result.put("carbs", parsed[1]);
-        result.put("fats", parsed[2]);
-        return result;
+    private MealResponse toMealResponse(Integer recipeId, String title, Integer calories,
+                                       Integer healthScore, String macros) {
+        MealResponse response = new MealResponse();
+        response.setRecipeId(recipeId);
+        response.setTitle(title);
+        response.setCalories(calories);
+        response.setHealthScore(healthScore);
+        response.setMacros(macros);
+        response.setMacrosBreakdown(MacrosDTO.fromString(macros));
+        return response;
     }
 }
