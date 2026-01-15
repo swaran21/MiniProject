@@ -17,6 +17,16 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    // --- Authentication Fields ---
+    @Column(nullable = false)
+    private String roles = "USER";  // USER, ADMIN (comma-separated for multiple roles)
+    
+    @Column(nullable = false)
+    private Boolean enabled = true;  // Account enabled/disabled
+    
+    @Column(updatable = false)
+    private java.time.LocalDateTime createdAt;
+
     // --- Profile Data ---
     private Double weightKg;
     private Double heightCm;
@@ -25,4 +35,11 @@ public class User {
     private String activityLevel; // Sedentary, Moderate, Active
     private String healthGoals; // Lose Weight, Balanced, Gain Muscle
     private String dietaryRestrictions; // None, Keto, Vegan
+    
+    @PrePersist
+    protected void onCreate() {
+        createdAt = java.time.LocalDateTime.now();
+        if (enabled == null) enabled = true;
+        if (roles == null) roles = "USER";
+    }
 }
