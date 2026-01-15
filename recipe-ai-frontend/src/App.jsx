@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Sidebar from "./components/Sidebar";
 import HealthProfileComponent from "./components/HealthProfileComponent";
 import RecipeComponent from "./components/RecipeComponent";
@@ -11,81 +12,63 @@ import ChatWidget from "./components/ChatWidget";
 import LoginComponent from "./components/LoginComponent";
 import "./App.css";
 
-function App() {
-  // --- Global Auth State ---
-  const [user, setUser] = useState(null);
+function AppContent() {
+  const { user, isAuthenticated, logout, loading } = useAuth();
   const [activeTab, setActiveTab] = useState("diet");
 
-  const handleLoginSuccess = (userData) => {
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+  const handleLoginSuccess = () => {
+    // Login handled by AuthContext, just for compatibility
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem("user");
-  };
-
-  // Check localStorage on mount
-  React.useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-  }, []);
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   // If not logged in, show login screen
-  if (!user) {
+  if (!isAuthenticated) {
     return <LoginComponent onLoginSuccess={handleLoginSuccess} />;
   }
 
   // Main App (User is logged in)
   return (
     <div className="App">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         user={user}
-        onLogout={handleLogout}
+        onLogout={logout}
       />
-      
-      {/* Main Content Area */}
 
-      <main className="main-content">
-        {activeTab === "health" && (
-          <HealthProfileComponent 
-            user={user} 
-            onUpdateProfile={(updated) => {
-              const updatedUser = {...user, ...updated};
-              setUser(updatedUser);
-              localStorage.setItem("user", JSON.stringify(updatedUser));
-            }} 
-          />
-        )}
-        {activeTab === "diet" && (
-          <DietTrackerComponent user={user} />
-        )}
-        {activeTab === "recipe" && <RecipeComponent user={user} />}
-        {activeTab === "browse" && (
-          <BrowseRecipes />
-        )}
+      <div className="main-content">
+        <ChatWidget />
 
-        {activeTab === "prescription" && (
-          <PrescriptionAnalyzer />
-        )}
-
-        {activeTab === "medical-meals" && (
-          <MedicalMealPlanner />
-        )}
-
-        {activeTab === "mealplan" && (
-          <MealPlanComponent user={user} />
-        )}
-      </main>
-
-      {/* Chat Widget - Always visible */}
-      <ChatWidget />
+        {activeTab === "diet" && <DietTrackerComponent userId={user?.id} />}
+        {activeTab === "health" && <HealthProfileComponent userId={user?.id} />}
+        {activeTab === "recipe" && <RecipeComponent userId={user?.id} />}
+        {activeTab === "meal-plan" && <MealPlanComponent userId={user?.id} />}
+        {activeTab === "browse" && <BrowseRecipes userId={user?.id} />}
+        {activeTab === "prescription" && <PrescriptionAnalyzer userId={user?.id} />}
+        {activeTab === "medical-meals" && <MedicalMealPlanner userId={user?.id} />}
+      </div>
     </div>
+  );
+}
+
+// Wrap entire app with AuthProvider
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

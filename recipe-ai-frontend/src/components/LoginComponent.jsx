@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-
-const API_BASE_URL = "http://localhost:8080";
+import { useAuth } from "../context/AuthContext";
 
 function LoginComponent({ onLoginSuccess }) {
+  const { login, register } = useAuth();
   const [authMode, setAuthMode] = useState("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -18,25 +18,26 @@ function LoginComponent({ onLoginSuccess }) {
     setError("");
     setLoading(true);
 
-    const endpoint = authMode === "login" ? "/api/auth/login" : "/api/auth/register";
-    const payload = authMode === "login" 
-      ? { username, password }
-      : { username, password, ...profileData };
-
     try {
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Authentication failed");
+      let result;
+      
+      if (authMode === "login") {
+        result = await login(username, password);
+      } else {
+        // For registration, combine credentials with profile data
+        result = await register({
+          username,
+          password,
+          ...profileData
+        });
       }
 
-      const userData = await res.json();
-      onLoginSuccess(userData);
+      if (result.success) {
+        // Login/register successful, call parent callback
+        onLoginSuccess({ username });
+      } else {
+        setError(result.error || "Authentication failed");
+      }
     } catch (err) {
       setError(err.message || "Authentication failed. Please try again.");
     } finally {
