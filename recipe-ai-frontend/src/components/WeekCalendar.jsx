@@ -140,11 +140,10 @@ function WeekCalendar({ plan, onClose, onDelete }) {
                     type="checkbox" 
                     className="completion-checkbox"
                     checked={!!isCompleted}
-                    onChange={(e) => {
+                    onClick={(e) => {
                       e.stopPropagation(); // Prevent card click
                       handleToggle(day.dayId);
                     }}
-                    onClick={(e) => e.stopPropagation()} // Prevent card click
                   />
                   <div>
                     <span className="day-number">Day {day.day}</span>
