@@ -180,8 +180,14 @@ function MedicalMealPlanner() {
               {mealPlan.summary}
             </div>
 
+            <div style={{ marginTop: '20px', marginBottom: '20px', textAlign: 'center' }}>
+              <strong style={{ fontSize: '1.1rem', color: '#667eea' }}>
+                📅 Showing all {mealPlan.daily_meals?.length} days of your meal plan
+              </strong>
+            </div>
+
             <div className="mmp-daily-grid">
-              {mealPlan.daily_meals?.slice(0, 6).map((day) => (
+              {mealPlan.daily_meals?.map((day) => (
                 <div key={day.day} className="mmp-day-card">
                   <h4 className="mmp-day-header">Day {day.day}</h4>
                   
