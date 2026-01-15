@@ -200,3 +200,5 @@ htmlcov/
 # git lfs install
 # git lfs track "data/training/*.txt"
 # git add .gitattributes
+
+images_prescription/

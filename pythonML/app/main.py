@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from app.models import (
     RecipeRequest, RecipeResponse, 
@@ -14,12 +14,14 @@ app = FastAPI(title="NutriChef AI - Machine Learning Microservice")
 
 # Configure CORS - ONLY allow Java middleware (3-tier architecture)
 # React (5173) → Java (8080) → Python (5000)
-# Python should NEVER talk directly to React!
+# Exception: OCR endpoint accepts direct React uploads (file upload limitation)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:8080",      # Java Spring Boot middleware
-        "http://127.0.0.1:8080"       # Alternative localhost
+        "http://127.0.0.1:8080",      # Alternative localhost
+        "http://localhost:5173",      # React frontend (for OCR file uploads only)
+        "http://127.0.0.1:5173"       # Alternative React localhost
     ],
     allow_credentials=True,
     allow_methods=["POST", "GET"],    # Explicit methods only
@@ -62,10 +64,12 @@ print("  ✅ AI Chatbot ready")
 from app.services.prescription_analyzer import PrescriptionAnalyzer
 from app.services.recipe_health_scorer import RecipeHealthScorer
 from app.services.medical_meal_planner import MedicalMealPlanner
+from app.services.ocr_service import OCRService
 
 prescription_analyzer = PrescriptionAnalyzer()
 health_scorer = RecipeHealthScorer()
 medical_meal_planner = MedicalMealPlanner(recipe_service.db_conn)
+ocr_service = OCRService()
 
 @app.post("/chat")
 async def chat(message: str):
@@ -271,6 +275,37 @@ async def generate_medical_meal_plan(request: dict):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Meal plan error: {str(e)}")
+
+@app.post("/api/ocr/extract-text")
+async def extract_prescription_text(file: UploadFile = File(...)):
+    """
+    Extract text from uploaded prescription image using Python OCR
+    
+    Features:
+    - Image preprocessing (grayscale, contrast, sharpening)
+    - Optimized for handwritten prescriptions
+    - Returns extracted text + confidence estimate
+    
+    No external APIs needed - fully self-contained!
+    """
+    try:
+        # Read image bytes
+        image_bytes = await file.read()
+        
+        # Extract text using OCR service
+        result = ocr_service.extract_text(image_bytes)
+        
+        return result
+        
+    except Exception as e:
+        print(f"OCR Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "success": False,
+            "text": "",
+            "error": f"OCR processing failed: {str(e)}"
+        }
 
 # ===== END HEALTH ENDPOINTS =====
 
