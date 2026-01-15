@@ -79,15 +79,28 @@ class RecipeService:
         
         # Decode
         generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        print(f"DEBUG RAW MODEL OUTPUT: {generated_text}") # Debugging line
+        print(f"DEBUG RAW MODEL OUTPUT: {generated_text}") 
         
-        # Extract OUTPUT section
+        # Robust Parsing Strategy to handle model glitches
+        # problem: sometimes model repeats INPUT or formatted oddly
+        
+        # 1. Strip the Input Prompt ("INPUT: ... OUTPUT:")
         if 'OUTPUT:' in generated_text:
-            recipe_text = generated_text.split('OUTPUT:')[1].strip()
-            if '<END>' in recipe_text:
-                recipe_text = recipe_text.split('<END>')[0].strip()
+            # Take everything after the last OUTPUT: to avoid repeat hallucinations
+            recipe_text = generated_text.split('OUTPUT:')[-1].strip()
         else:
-            recipe_text = generated_text
+            # Fallback: Model forgot OUTPUT tag, try to remove INPUT manually
+            recipe_text = generated_text.replace(input_text, "").strip()
+            
+        # 2. Cleanup End Tokens
+        if '<END>' in recipe_text:
+            recipe_text = recipe_text.split('<END>')[0].strip()
+            
+        # 3. Final safety cleanup
+        # If text starts with "TITLE |", it's good. If it looks like ingredients, it's messy.
+        if "INPUT:" in recipe_text: # Double check prompt leakage
+            recipe_text = recipe_text.split("OUTPUT:")[-1].strip()
+
         
         # Use centralized parser
         return self._parse_recipe_text(recipe_text)
@@ -540,7 +553,7 @@ class RecipeService:
                     ingredients=retrieved_recipe['ingredients'],
                     instructions=retrieved_recipe['instructions'],
                     cuisineType=request.cuisine,
-                    calories=self.nutrition_service.estimate_calories(retrieved_recipe['ingredients'])['calories'],
+                    calories=int(self.nutrition_service.estimate_calories(retrieved_recipe['ingredients'])['calories']),
                     imageUrl="https://via.placeholder.com/300?text=" + retrieved_recipe['title'].replace(" ", "+")
                 )
         except Exception as e:
@@ -560,7 +573,7 @@ class RecipeService:
                     ingredients=ingredients_list,
                     instructions=ml_recipe['instructions'] if ml_recipe['instructions'] else "Generated recipe instructions",
                     cuisineType=request.cuisine,
-                    calories=nutrition['calories'], 
+                    calories=int(nutrition['calories']), 
                     imageUrl="https://via.placeholder.com/300?text=" + ml_recipe['title'].replace(" ", "+")
                 )
             except Exception as e:
@@ -582,6 +595,6 @@ class RecipeService:
             ingredients=ings + ["Olive Oil", "Salt", "Special Herbs"],
             instructions=instructions,
             cuisineType=request.cuisine,
-            calories=nutrition['calories'],
+            calories=int(nutrition['calories']),
             imageUrl="https://via.placeholder.com/300?text=" + title.replace(" ", "+")
         )
