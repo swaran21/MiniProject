@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import './WeekCalendar.css';
 import { toggleDayCompletion } from '../services/mealPlanService';
+import DayDetailModal from './DayDetailModal';
 
 function WeekCalendar({ plan, onClose, onDelete }) {
   const [currentWeek, setCurrentWeek] = useState(0); // 0-indexed week offset
   const [weekDays, setWeekDays] = useState([]);
   const [completedDays, setCompletedDays] = useState({}); // { dayId: boolean }
+  const [selectedDay, setSelectedDay] = useState(null); // For day detail modal
 
   // Total weeks
   const totalWeeks = Math.ceil(plan.duration_days / 7);
@@ -129,6 +131,8 @@ function WeekCalendar({ plan, onClose, onDelete }) {
           <div 
             key={day.day} 
             className={`cal-day-card ${isToday(day.date) ? 'today' : ''} ${isCompleted ? 'completed' : ''}`}
+            onClick={() => setSelectedDay(day)}
+            style={{ cursor: 'pointer' }}
           >
             <div className="day-header">
               <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
@@ -136,7 +140,11 @@ function WeekCalendar({ plan, onClose, onDelete }) {
                     type="checkbox" 
                     className="completion-checkbox"
                     checked={!!isCompleted}
-                    onChange={() => handleToggle(day.dayId)}
+                    onChange={(e) => {
+                      e.stopPropagation(); // Prevent card click
+                      handleToggle(day.dayId);
+                    }}
+                    onClick={(e) => e.stopPropagation()} // Prevent card click
                   />
                   <div>
                     <span className="day-number">Day {day.day}</span>
@@ -183,6 +191,14 @@ function WeekCalendar({ plan, onClose, onDelete }) {
           </div>
         ))}
       </div>
+
+      {/* Day Detail Modal */}
+      {selectedDay && (
+        <DayDetailModal 
+          day={selectedDay} 
+          onClose={() => setSelectedDay(null)} 
+        />
+      )}
     </div>
   );
 }

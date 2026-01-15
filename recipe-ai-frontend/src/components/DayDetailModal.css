@@ -1,0 +1,174 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+.day-detail-modal {
+  background: linear-gradient(145deg, rgba(20, 20, 40, 0.95), rgba(10, 10, 30, 0.95));
+  border: 1px solid rgba(120, 255, 214, 0.2);
+  border-radius: 24px;
+  padding: 2rem;
+  max-width: 900px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: scaleIn 0.3s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header h2 {
+  color: #78ffd6;
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.modal-date {
+  color: #888;
+  font-size: 0.9rem;
+  margin-top: 0.3rem;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+.meals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.meal-card {
+  background: linear-gradient(145deg, rgba(40, 40, 80, 0.6), rgba(30, 30, 60, 0.6));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.meal-card.clickable {
+  cursor: pointer;
+}
+
+.meal-card.clickable:hover {
+  transform: translateY(-5px);
+  border-color: rgba(120, 255, 214, 0.5);
+  box-shadow: 0 10px 30px rgba(120, 255, 214, 0.2);
+}
+
+.meal-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.meal-icon {
+  font-size: 2rem;
+}
+
+.meal-card h3 {
+  color: white;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.meal-title {
+  color: #ccc;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  min-height: 40px;
+}
+
+.meal-stats {
+  display: flex;
+  justify-content: space-between;
+  color: #78ffd6;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.day-summary {
+  background: linear-gradient(145deg, rgba(60, 60, 120, 0.4), rgba(40, 40, 80, 0.4));
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid rgba(120, 255, 214, 0.2);
+}
+
+.day-summary h3 {
+  color: #78ffd6;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.stat-label {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.stat-value {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
