@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './MedicalMealPlanner.css';
+import { saveMealPlan, getActiveMealPlan, deleteMealPlan } from '../services/mealPlanService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -10,6 +11,9 @@ function MedicalMealPlanner() {
   const [mealPlan, setMealPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [savedPlan, setSavedPlan] = useState(null);
+  const [viewMode, setViewMode] = useState('generate'); // 'generate' or 'saved'
+  const userId = 1; // TODO: Get from auth context
 
   const conditionOptions = [
     'diabetes_type2',
@@ -70,6 +74,15 @@ function MedicalMealPlanner() {
       }
       
       setMealPlan(data);
+      
+      // Auto-save to database
+      try {
+        await saveMealPlan(data, userId);
+        console.log('✅ Meal plan auto-saved to database');
+      } catch (saveErr) {
+        console.warn('⚠️ Failed to auto-save meal plan:', saveErr);
+        // Non-blocking: plan still generated successfully
+      }
     } catch (err) {
       console.error('Meal Plan Generation Error:', err);
       // Backend might be offline or blocked
@@ -83,13 +96,90 @@ function MedicalMealPlanner() {
     }
   };
 
+  // Load saved plan on component mount
+  useEffect(() => {
+    loadSavedPlan();
+  }, []);
+
+  const loadSavedPlan = async () => {
+    try {
+      const plan = await getActiveMealPlan(userId);
+      if (plan) {
+        setSavedPlan(plan);
+        console.log('✅ Loaded saved meal plan from database');
+      }
+    } catch (err) {
+      console.error('Error loading saved plan:', err);
+    }
+  };
+
+  const handleDeletePlan = async () => {
+    if (!savedPlan || !confirm('Are you sure you want to delete this meal plan?')) {
+      return;
+    }
+
+    try {
+      await deleteMealPlan(savedPlan.planId);
+      setSavedPlan(null);
+      setMealPlan(null);
+      setViewMode('generate');
+      console.log('✅ Meal plan deleted');
+    } catch (err) {
+      console.error('Error deleting plan:', err);
+      setError('Failed to delete meal plan');
+    }
+  };
+
+  const viewSavedPlan = () => {
+    if (savedPlan) {
+      // Convert savedPlan (Java DTO format) to display format
+      const displayPlan = {
+        plan_id: savedPlan.planId,
+        duration_days: savedPlan.durationDays,
+        conditions: savedPlan.conditions,
+        summary: savedPlan.summary,
+        daily_meals: savedPlan.dailyMeals.map(day => ({
+          day: day.day,
+          date: day.date,
+          total_calories: day.totalCalories,
+          breakfast: day.breakfast,
+          lunch: day.lunch,
+          dinner: day.dinner,
+          snacks: day.snacks || []
+        }))
+      };
+      setMealPlan(displayPlan);
+      setViewMode('saved');
+    }
+  };
+
   return (
     <div className="medical-meal-planner">
       <div className="mmp-container">
         {/* Header */}
         <div className="mmp-header">
           <h1 className="mmp-title">🍽️ Medical Meal Planner</h1>
-          <p className="mmp-subtitle">Generic AI-driven nutrition plans for managing health conditions</p>
+          <p className="mmp-subtitle">AI-driven nutrition plans for managing health conditions</p>
+          
+          {/* Saved Plan Actions */}
+          {savedPlan && (
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+              <button 
+                className="mmp-button-secondary" 
+                onClick={viewSavedPlan}
+                style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
+              >
+                📋 View Saved Plan ({savedPlan.durationDays} days)
+              </button>
+              <button 
+                className="mmp-button-danger" 
+                onClick={handleDeletePlan}
+                style={{ fontSize: '0.9rem', padding: '0.5rem 1rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+              >
+                🗑️ Delete Plan
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Configuration Card */}
