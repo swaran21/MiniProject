@@ -215,6 +215,21 @@ function MedicalMealPlanner() {
                     </div>
                   </div>
 
+                  {/* SNACKS - These are included in the total! */}
+                  {day.snacks && day.snacks.length > 0 && (
+                    <div className="mmp-meal-item" style={{ borderTop: '1px dashed #e0e0e0', paddingTop: '10px', marginTop: '10px' }}>
+                      <span className="mmp-meal-label">🍿 Snacks</span>
+                      {day.snacks.map((snack, idx) => (
+                        <div key={idx} style={{ marginTop: '5px', fontSize: '0.9rem' }}>
+                          <p className="mmp-meal-name" style={{ fontSize: '0.95rem' }}>{snack.title}</p>
+                          <div className="mmp-meal-stats" style={{ fontSize: '0.85rem' }}>
+                            {snack.calories} kcal • Score: {snack.health_score}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="mmp-day-total">
                     <strong>Total: {day.total_calories} kcal</strong>
                   </div>
