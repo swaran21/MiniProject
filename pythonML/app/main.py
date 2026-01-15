@@ -296,14 +296,8 @@ async def generate_medical_meal_plan(request: dict):
         # Generate meal plan
         meal_plan = medical_meal_planner.create_plan(analysis, duration_days)
         
-       # AUTO-SAVE to Java backend (persistence layer)
-        try:
-            await save_meal_plan_to_java(meal_plan, user_id)
-            print(f"✅ Meal plan auto-saved to Java backend for user {user_id}")
-        except Exception as save_error:
-            # Non-blocking: Even if save fails, still return the plan to user
-            print(f"⚠️ Failed to auto-save to Java: {save_error}")
-        
+        # Return the generated plan (no auto-save)
+        # Frontend will provide a "Save" button to explicitly save via Java backend
         return meal_plan
         
     except HTTPException:

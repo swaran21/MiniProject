@@ -1,5 +1,6 @@
 package com.ai.SpringAIProject.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -34,10 +35,12 @@ public class SaveMealPlanRequest {
     @AllArgsConstructor
     public static class MealPlanDataDTO {
         
+        @JsonProperty("plan_id")
         private String planId;  // Optional - will be generated if not provided
         
         @NotNull(message = "Duration is required")
         @Min(value = 1, message = "Duration must be at least 1 day")
+        @JsonProperty("duration_days")
         private Integer durationDays;
         
         private String summary;
@@ -45,6 +48,7 @@ public class SaveMealPlanRequest {
         private List<String> conditions;  // ["diabetes_type2", "hypertension"]
         
         @NotNull(message = "Daily meals are required")
+        @JsonProperty("daily_meals")
         private List<DailyMealDTO> dailyMeals;
     }
     
@@ -73,6 +77,7 @@ public class SaveMealPlanRequest {
         private List<MealDTO> snacks;
         
         @NotNull(message = "Total calories required")
+        @JsonProperty("total_calories")
         private Integer totalCalories;
     }
     
@@ -84,6 +89,7 @@ public class SaveMealPlanRequest {
     @AllArgsConstructor
     public static class MealDTO {
         
+        @JsonProperty("recipe_id")
         private Integer recipeId;
         
         @NotNull(message = "Meal title is required")
@@ -93,6 +99,7 @@ public class SaveMealPlanRequest {
         @Min(value = 0, message = "Calories cannot be negative")
         private Integer calories;
         
+        @JsonProperty("health_score")
         private Integer healthScore;  // Default to 100 if not provided
         
         // Macros can be:

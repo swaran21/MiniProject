@@ -74,15 +74,8 @@ function MedicalMealPlanner() {
       }
       
       setMealPlan(data);
+      // Auto-save REMOVED - User must click Save button
       
-      // Auto-save to database
-      try {
-        await saveMealPlan(data, userId);
-        console.log('✅ Meal plan auto-saved to database');
-      } catch (saveErr) {
-        console.warn('⚠️ Failed to auto-save meal plan:', saveErr);
-        // Non-blocking: plan still generated successfully
-      }
     } catch (err) {
       console.error('Meal Plan Generation Error:', err);
       // Backend might be offline or blocked
@@ -110,6 +103,23 @@ function MedicalMealPlanner() {
       }
     } catch (err) {
       console.error('Error loading saved plan:', err);
+    }
+  };
+
+  const handleSavePlan = async () => {
+    if (!mealPlan) return;
+    
+    try {
+      setLoading(true);
+      await saveMealPlan(mealPlan, userId);
+      console.log('✅ Meal plan saved manually');
+      await loadSavedPlan(); // Reload to update state
+      setViewMode('saved');
+    } catch (err) {
+      console.error('Failed to save plan:', err);
+      setError('Failed to save meal plan: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -162,7 +172,7 @@ function MedicalMealPlanner() {
           <p className="mmp-subtitle">AI-driven nutrition plans for managing health conditions</p>
           
           {/* Saved Plan Actions */}
-          {savedPlan && (
+          {savedPlan && viewMode !== 'saved' && (
             <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
               <button 
                 className="mmp-button-secondary" 
@@ -171,18 +181,12 @@ function MedicalMealPlanner() {
               >
                 📋 View Saved Plan ({savedPlan.durationDays} days)
               </button>
-              <button 
-                className="mmp-button-danger" 
-                onClick={handleDeletePlan}
-                style={{ fontSize: '0.9rem', padding: '0.5rem 1rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
-              >
-                🗑️ Delete Plan
-              </button>
             </div>
           )}
         </div>
 
         {/* Configuration Card */}
+        {viewMode === 'generate' && !mealPlan && (
         <div className="mmp-card">
           <h3 className="mmp-section-title">Step 1: Select Your Conditions</h3>
 
@@ -258,13 +262,57 @@ function MedicalMealPlanner() {
             {loading ? '⏳ Analyzing Health Data & Generating Plan...' : '✨ Generate Personalized Meal Plan'}
           </button>
         </div>
+        )}
 
         {/* Results Card */}
         {mealPlan && (
           <div className="mmp-card">
-            <h3 className="mmp-results-header">
-              📅 Your {mealPlan.duration_days}-Day Health Plan
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 className="mmp-results-header" style={{ margin: 0 }}>
+                📅 Your {mealPlan.duration_days}-Day Health Plan
+              </h3>
+              
+              <div className="mmp-actions">
+                {viewMode === 'generate' && !savedPlan ? (
+                  <button 
+                    onClick={handleSavePlan}
+                    className="mmp-btn-save"
+                    style={{ 
+                      backgroundColor: '#28a745', 
+                      color: 'white', 
+                      padding: '0.5rem 1rem', 
+                      borderRadius: '5px', 
+                      border: 'none', 
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                    disabled={loading}
+                  >
+                   💾 {loading ? 'Saving...' : 'Save Plan'}
+                  </button>
+                ) : (
+                  <button 
+                    className="mmp-button-danger" 
+                    onClick={handleDeletePlan}
+                    style={{ fontSize: '0.9rem', padding: '0.5rem 1rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+                  >
+                    🗑️ Delete Plan
+                  </button>
+                )}
+                
+                {viewMode === 'saved' && (
+                   <button 
+                     onClick={() => { setMealPlan(null); setViewMode('generate'); }} 
+                     style={{ marginLeft: '10px', padding: '0.5rem', cursor: 'pointer' }}
+                   >
+                     ✖ Close
+                   </button>
+                )}
+              </div>
+            </div>
             
             <div className="mmp-summary">
               {mealPlan.summary}
