@@ -121,16 +121,25 @@ public class MealPlanService {
     }
     
     /**
-     * Soft delete a meal plan (set isActive = false)
+     * Hard delete a meal plan (permanent removal from database)
      * 
-     * Business Rule: Soft delete to preserve history
+     * Business Rule: Permanently removes meal plan and all associated days
+     * Explicitly deletes days first to avoid foreign key constraint issues
      */
     @Transactional
     public boolean deletePlan(String planId) {
         return mealPlanRepository.findById(planId)
             .map(plan -> {
-                plan.setIsActive(false);
-                mealPlanRepository.save(plan);
+                // STEP 1: Bulk delete all associated days first (direct SQL)
+                mealPlanDayRepository.deleteByPlanId(planId);
+                
+                // STEP 2: Clear the days collection to prevent cascade delete attempt
+                // This avoids StaleObjectStateException
+                plan.getDays().clear();
+                
+                // STEP 3: Then delete the plan
+                mealPlanRepository.delete(plan);
+                
                 return true;
             })
             .orElse(false);
