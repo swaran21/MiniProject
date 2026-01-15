@@ -103,4 +103,21 @@ public class HealthController {
             return Map.of("error", "Invalid profile data: " + e.getMessage());
         }
     }
+
+    @PostMapping("/ocr/extract-text")
+    public Object extractTextFromImage(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            System.out.println("OCR request received. File: " + file.getOriginalFilename());
+            
+            // Proxy to Python OCR service
+            return mlService.extractTextFromImage(file.getBytes());
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Map.of(
+                "success", false,
+                "error", "OCR processing failed: " + e.getMessage()
+            );
+        }
+    }
 }

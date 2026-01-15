@@ -203,4 +203,37 @@ public class MLBridgeService {
             return null;
         }
     }
+
+    public Object extractTextFromImage(byte[] imageBytes) {
+        String url = "http://localhost:5000/api/ocr/extract-text";
+        
+        try {
+            // Create multipart request
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+            
+            org.springframework.util.MultiValueMap<String, Object> body = new org.springframework.util.LinkedMultiValueMap<>();
+            body.add("file", new org.springframework.core.io.ByteArrayResource(imageBytes) {
+                @Override
+                public String getFilename() {
+                    return "prescription.png";
+                }
+            });
+            
+            org.springframework.http.HttpEntity<org.springframework.util.MultiValueMap<String, Object>>requestEntity = 
+                new org.springframework.http.HttpEntity<>(body, headers);
+            
+            Object response = restTemplate.postForObject(url, requestEntity, Object.class);
+            System.out.println("Python OCR Response: " + response);
+            return response;
+            
+        } catch (Exception e) {
+            System.err.println("Error calling Python OCR service: " + e.getMessage());
+            e.printStackTrace();
+            return java.util.Map.of(
+                "success", false,
+                "error", "Failed to call Python OCR service: " + e.getMessage()
+            );
+        }
+    }
 }
