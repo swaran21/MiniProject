@@ -75,8 +75,18 @@ public class MealPlanMapper {
                 .collect(Collectors.toList()));
         }
         
-        // Set totals
-        day.setTotalCalories(dayDTO.getTotalCalories());
+        // Set totals - CALCULATE if not provided by Python!
+        Integer totalCalories = dayDTO.getTotalCalories();
+        if (totalCalories == null) {
+            // Auto-calculate from breakfast + lunch + dinner + snacks
+            totalCalories = day.getBreakfastCalories() + day.getLunchCalories() + day.getDinnerCalories();
+            if (day.getSnacks() != null) {
+                totalCalories += day.getSnacks().stream()
+                    .mapToInt(SnackItem::getCalories)
+                    .sum();
+            }
+        }
+        day.setTotalCalories(totalCalories);
         day.setTotalMacros(calculateDayTotalMacros(day));
         
         return day;
