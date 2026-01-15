@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Tesseract from 'tesseract.js';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -90,7 +89,7 @@ function PrescriptionAnalyzer() {
                 border: '1px solid #ccc',
                 marginBottom: '8px'
              }}>
-                📷 Scan Image (Client-Side OCR)
+                📷 Scan Image (Python OCR + Preprocessing)
                 <input 
                   type="file" 
                   accept="image/*" 
@@ -101,12 +100,30 @@ function PrescriptionAnalyzer() {
                     setLoading(true);
                     setError(null);
                     try {
-                      // Using Tesseract.js for OCR
-                      const { data: { text } } = await Tesseract.recognize(file, 'eng');
-                      setPrescriptionText(text);
+                      // FIX: Call Java middleware, NOT Python directly!
+                      // React → Java → Python (3-tier architecture)
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      
+                      const response = await fetch(`${API_BASE_URL}/api/health/ocr/extract-text`, {
+                        method: 'POST',
+                        body: formData
+                      });
+                      
+                      const data = await response.json();
+                      
+                      if (data.success) {
+                        setPrescriptionText(data.text);
+                        // Show confidence if available
+                        if (data.confidence) {
+                          console.log(`OCR Confidence: ${data.confidence}`);
+                        }
+                      } else {
+                        throw new Error(data.error || 'OCR extraction failed');
+                      }
                     } catch (err) {
                       console.error("OCR Error:", err);
-                      setError("Failed to read image text. Please type manually.");
+                      setError("Failed to read image. Please type manually or try a clearer photo.");
                     } finally {
                       setLoading(false);
                     }
