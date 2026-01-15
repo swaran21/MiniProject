@@ -54,11 +54,34 @@ function HealthProfileComponent({ user, onUpdateProfile }) {
     e.preventDefault();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/health/analyze?userId=${user.id}`, {
+      // NOTE: Using the new HealthController endpoint
+      // We need to implement this endpoint in Java or use an existing one.
+      // For now, let's assume we want to get a general diet recommendation based on profile.
+      // The DietService in Python has `recommend` (adaptive-diet).
+      // Let's redirect to that via Java if possible, or create a new endpoint.
+      // Actually, looking at the UI, it expects BMI and Calorie needs.
+      // This logic is usually simple calculation, can be done in frontend or backend.
+      // Since it was failing 403, and invalid JSON, let's fix the endpoint.
+      
+      // Let's implement client-side calculation for BMI/Calories as a fallback if API fails, 
+      // OR fix the API. The user wants the API to work.
+      // The error was 403 (Forbidden). 
+      // Let's change the endpoint to one that exists or create it.
+      // There is NO /api/health/analyze in HealthController.
+      // Let's try /api/health/analyze-profile if we create it.
+      
+      // For now, I'll update it to use the endpoint I will create: /api/health/analyze-profile
+      const response = await fetch(`${API_BASE_URL}/api/health/analyze-profile?userId=${user.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
+      
+      if (!response.ok) {
+          if (response.status === 403) throw new Error("Access Denied (403). Check Java Security Config.");
+          throw new Error(`Server responded with ${response.status}`);
+      }
+
       const data = await response.json();
       setResult(data);
     } catch (error) {

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import Tesseract from 'tesseract.js';
+
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -75,6 +77,46 @@ function PrescriptionAnalyzer() {
           }}>
             📋 Enter Your Prescription
           </label>
+
+          {/* OCR Image Upload */}
+          <div style={{ marginBottom: '16px' }}>
+             <label style={{
+                display: 'inline-block',
+                padding: '8px 16px',
+                background: '#f0f0f0',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                border: '1px solid #ccc',
+                marginBottom: '8px'
+             }}>
+                📷 Scan Image (Client-Side OCR)
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    setLoading(true);
+                    setError(null);
+                    try {
+                      // Using Tesseract.js for OCR
+                      const { data: { text } } = await Tesseract.recognize(file, 'eng');
+                      setPrescriptionText(text);
+                    } catch (err) {
+                      console.error("OCR Error:", err);
+                      setError("Failed to read image text. Please type manually.");
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+             </label>
+             {loading && !prescriptionText && <span style={{ marginLeft: '10px', color: '#666' }}>🔍 Scanning image...</span>}
+          </div>
+
           <textarea
     value={prescriptionText}
             onChange={(e) => setPrescriptionText(e.target.value)}
