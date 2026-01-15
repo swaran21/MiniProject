@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
 import HealthProfileComponent from "./components/HealthProfileComponent";
 import RecipeComponent from "./components/RecipeComponent";
 import MealPlanComponent from "./components/MealPlanComponent";
@@ -42,33 +42,14 @@ function App() {
   // Main App (User is logged in)
   return (
     <div className="App">
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        user={user}
+        onLogout={handleLogout}
+      />
       
-      {/* User Info Bar */}
-      <div style={{ 
-        background: "#667eea", 
-        color: "white", 
-        padding: "10px 20px", 
-        display: "flex", 
-        justifyContent: "space-between",
-        alignItems: "center"
-      }}>
-        <span>👤 Welcome, <strong>{user.username}</strong></span>
-        <button 
-          onClick={handleLogout}
-          style={{
-            background: "white",
-            color: "#667eea",
-            border: "none",
-            padding: "5px 15px",
-            borderRadius: "5px",
-            cursor: "pointer",
-            fontWeight: "bold"
-          }}
-        >
-          Logout
-        </button>
-      </div>
+      {/* Main Content Area */}
 
       <main className="main-content">
         {activeTab === "health" && (
