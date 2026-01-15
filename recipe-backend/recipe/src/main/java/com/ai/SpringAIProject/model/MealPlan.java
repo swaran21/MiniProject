@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Type;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -31,8 +31,8 @@ public class MealPlan {
     @Column(name = "user_id", nullable = false)
     private Long userId;  // FK to users table (will add @ManyToOne later)
     
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "conditions", columnDefinition = "jsonb")
-    @Type(JsonBinaryType.class)
     private List<String> conditions;  // ["diabetes_type2", "hypertension"]
     
     @Column(name = "duration_days", nullable = false)

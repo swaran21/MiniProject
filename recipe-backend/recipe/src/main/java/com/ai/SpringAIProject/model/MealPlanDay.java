@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Type;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -90,8 +90,8 @@ public class MealPlanDay {
     private String dinnerMacros;  // "P:35 C:40 F:20"
     
     // ===== SNACKS (JSON array) =====
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "snacks", columnDefinition = "jsonb")
-    @Type(JsonBinaryType.class)
     private List<SnackItem> snacks;  // [{"title":"Almonds", "calories":150}]
     
     // ===== DAILY TOTALS =====
