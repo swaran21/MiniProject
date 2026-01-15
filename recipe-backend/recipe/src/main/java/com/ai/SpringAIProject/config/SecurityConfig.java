@@ -9,7 +9,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
@@ -20,10 +19,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.disable())  // Disabled for stateless REST API
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/**").permitAll() // Allow all API endpoints for logged-in users
+                // ⚠️ SECURITY WARNING: MVP DEVELOPMENT ONLY!
+                // This allows ALL API requests without authentication.
+                // For PRODUCTION deployment, change to:
+                // .requestMatchers("/api/**").authenticated()
+                // and implement proper JWT/OAuth2 authentication!
+                .requestMatchers("/api/**").permitAll()  // MVP: Allow testing without auth
                 .anyRequest().authenticated()
             );
         return http.build();
