@@ -103,9 +103,11 @@ class PrescriptionAnalyzer:
                 match = re.search(pattern, text_lower)
                 if match:
                     # Check for negation in preceding context
-                    # Look at 20 characters before the match
+                    # IMPROVED: Increased window from 20 to 50 characters
+                    # This catches longer negation phrases like:
+                    # "Patient does not appear to have any symptoms of diabetes"
                     start_index = match.start()
-                    preceding_text = text_lower[max(0, start_index - 20):start_index]
+                    preceding_text = text_lower[max(0, start_index - 50):start_index]
                     
                     # Skip if negated (e.g., "no diabetes", "not hypertensive")
                     negation_words = ['no ', 'not ', 'negative ', 'absent ', 'ruled out']

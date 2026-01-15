@@ -7,16 +7,44 @@ import random
 import re
 import sqlite3
 
+# CRITICAL FIX: Singleton Pattern to Prevent Memory Leak
+# The GPT-2 model is 500MB. Without this, each RecipeService() instantiation 
+# loads a new copy into RAM, causing memory exhaustion.
+_RECIPE_SERVICE_INSTANCE = None
+
 class RecipeService:
+    """
+    Recipe Generation Service with Hybrid RAG Architecture
+    
+    SINGLETON IMPLEMENTATION:
+    - Uses __new__ to ensure only ONE instance exists
+    - Model is loaded ONCE per application lifecycle
+    - Prevents 500MB x N instances memory leak
+    """
+    
+    def __new__(cls):
+        """Singleton constructor - returns existing instance if available"""
+        global _RECIPE_SERVICE_INSTANCE
+        if _RECIPE_SERVICE_INSTANCE is None:
+            _RECIPE_SERVICE_INSTANCE = super(RecipeService, cls).__new__(cls)
+            _RECIPE_SERVICE_INSTANCE._initialized = False
+        return _RECIPE_SERVICE_INSTANCE
+    
     def __init__(self):
-        """Initialize and load the trained GPT-2 recipe model"""
+        """Initialize model and database (only runs once due to Singleton)"""
+        # Prevent re-initialization if already loaded
+        if self._initialized:
+            return
+        
+        self._initialized = True
+        
         # Initialize nutrition service for real calorie calculations
         self.nutrition_service = NutritionService()
         
         model_path = "app/models/recipe_gpt2_improved"
         if os.path.exists(model_path):
             try:
-                print(f"Loading trained recipe model from {model_path}...")
+                print(f"🔄 Loading trained recipe model from {model_path}...")
                 self.tokenizer = GPT2Tokenizer.from_pretrained(model_path)
                 self.model = GPT2LMHeadModel.from_pretrained(model_path)
                 self.model.eval()  # Set to evaluation mode
