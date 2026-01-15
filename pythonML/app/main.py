@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+import httpx  # For calling Java backend
 from app.models import (
     RecipeRequest, RecipeResponse, 
     UserProfile, MealPlanResponse, 
@@ -226,6 +227,35 @@ async def get_recipe_health_score(recipe_id: int, conditions: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
+async def save_meal_plan_to_java(meal_plan: dict, user_id: int):
+    """
+    Auto-save generated meal plan to Java backend for persistence
+    
+    This integrates Python (generation) with Java (persistence)
+    Following the CQRS pattern: Python = Command, Java = Query
+    """
+    JAVA_BACKEND_URL = "http://localhost:8080"  # Java Spring Boot backend
+    
+    # Transform Python response to Java DTO format
+    java_request = {
+        "userId": user_id,
+        "planData": {
+            "planId": meal_plan.get("plan_id"),
+            "durationDays": meal_plan.get("duration_days"),
+            "summary": meal_plan.get("summary"),
+            "conditions": meal_plan.get("conditions", []),
+            "dailyMeals": meal_plan.get("daily_meals", [])
+        }
+    }
+    
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(
+            f"{JAVA_BACKEND_URL}/api/health/meal-plan/save",
+            json=java_request
+        )
+        response.raise_for_status()  # Raise exception if HTTP error
+        return response.json()
+
 @app.post("/health/generate-meal-plan")
 async def generate_medical_meal_plan(request: dict):
     """
@@ -265,6 +295,14 @@ async def generate_medical_meal_plan(request: dict):
         
         # Generate meal plan
         meal_plan = medical_meal_planner.create_plan(analysis, duration_days)
+        
+       # AUTO-SAVE to Java backend (persistence layer)
+        try:
+            await save_meal_plan_to_java(meal_plan, user_id)
+            print(f"✅ Meal plan auto-saved to Java backend for user {user_id}")
+        except Exception as save_error:
+            # Non-blocking: Even if save fails, still return the plan to user
+            print(f"⚠️ Failed to auto-save to Java: {save_error}")
         
         return meal_plan
         
