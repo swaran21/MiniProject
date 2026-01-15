@@ -101,11 +101,16 @@ public class MealPlanDay {
     @Column(name = "total_macros", length = 50)
     private String totalMacros;  // "P:86 C:156 F:59"
     
+    // ===== PROGRESS TRACKING =====
+    @Column(name = "is_completed")
+    private Boolean isCompleted = false;
+
     @Column(name = "created_at", updatable = false)
     private LocalDate createdAt;
     
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDate.now();
+        if (isCompleted == null) isCompleted = false;
     }
 }

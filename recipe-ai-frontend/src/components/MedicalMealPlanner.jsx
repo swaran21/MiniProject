@@ -158,8 +158,10 @@ function MedicalMealPlanner() {
         conditions: sourcePlan.conditions,
         summary: sourcePlan.summary,
         daily_meals: sourcePlan.dailyMeals.map(day => ({
+          dayId: day.dayId,
           day: day.day,
           date: day.date,
+          isCompleted: day.isCompleted, // Include completion status
           total_calories: day.totalCalories,
           breakfast: day.breakfast,
           lunch: day.lunch,

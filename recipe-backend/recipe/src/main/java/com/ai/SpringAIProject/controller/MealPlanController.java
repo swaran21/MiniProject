@@ -1,6 +1,8 @@
 package com.ai.SpringAIProject.controller;
 
 import com.ai.SpringAIProject.dto.*;
+import com.ai.SpringAIProject.dto.*;
+import com.ai.SpringAIProject.model.MealPlanDay;
 import com.ai.SpringAIProject.service.MealPlanService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -152,6 +154,20 @@ public class MealPlanController {
             return ResponseEntity.ok(response);
         } else {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/day/{dayId}/toggle-complete")
+    public ResponseEntity<?> toggleDayCompletion(@PathVariable Long dayId) {
+        try {
+            MealPlanDay updatedDay = mealPlanService.toggleDayCompletion(dayId);
+            return ResponseEntity.ok(Map.of(
+                "dayId", updatedDay.getDayId(),
+                "dayNumber", updatedDay.getDayNumber(),
+                "isCompleted", updatedDay.getIsCompleted()
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
     

@@ -191,8 +191,10 @@ public class MealPlanMapper {
      */
     public MealPlanDayResponse toDayResponse(MealPlanDay day) {
         MealPlanDayResponse response = new MealPlanDayResponse();
+        response.setDayId(day.getDayId());  // ADD THIS - critical for frontend toggle
         response.setDay(day.getDayNumber());
         response.setDate(day.getDayDate().toString());
+        response.setIsCompleted(day.getIsCompleted());  // ADD THIS - for checkbox state
         
         // Convert meals
         response.setBreakfast(toMealResponse(

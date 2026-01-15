@@ -14,8 +14,10 @@ import java.util.List;
 @AllArgsConstructor
 public class MealPlanDayResponse {
     
+    private Long dayId;  // Database ID for this day (needed for toggle API)
     private Integer day;
     private String date;  // ISO format: "2026-01-15"
+    private Boolean isCompleted;  // Progress tracking
     
     private MealResponse breakfast;
     private MealResponse lunch;

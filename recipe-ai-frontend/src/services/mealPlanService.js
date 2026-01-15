@@ -55,3 +55,22 @@ export const deleteMealPlan = async (planId) => {
 
   return response.json();
 };
+
+/**
+ * Toggle the completion status of a specific day
+ */
+export const toggleDayCompletion = async (dayId) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/health/meal-plan/day/${dayId}/toggle-complete`, {
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to toggle completion: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error toggling completion:", error);
+        throw error;
+    }
+};

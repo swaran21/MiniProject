@@ -90,6 +90,24 @@
   overflow: hidden;
 }
 
+.cal-day-card.completed {
+    opacity: 0.6;
+    background: rgba(0, 0, 0, 0.3);
+    border-color: #28a745;
+}
+
+.completion-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #28a745;
+}
+
+.cal-day-card.completed .meal-title {
+    text-decoration: line-through;
+    color: #888;
+}
+
 .cal-day-card:hover {
   transform: translateY(-5px);
   border-color: rgba(120, 255, 214, 0.3);

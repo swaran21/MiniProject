@@ -144,6 +144,20 @@ public class MealPlanService {
             })
             .orElse(false);
     }
+
+    /**
+     * Toggles the completion status of a specific meal plan day
+     */
+    @Transactional
+    public MealPlanDay toggleDayCompletion(Long dayId) {
+        return mealPlanDayRepository.findById(dayId)
+            .map(day -> {
+                boolean newState = day.getIsCompleted() == null ? true : !day.getIsCompleted();
+                day.setIsCompleted(newState);
+                return mealPlanDayRepository.save(day);
+            })
+            .orElseThrow(() -> new RuntimeException("Meal Plan Day not found with ID: " + dayId));
+    }
     
     /**
      * Check if user has an active plan
