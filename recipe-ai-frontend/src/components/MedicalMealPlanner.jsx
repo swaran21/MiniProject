@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './MedicalMealPlanner.css';
 import { saveMealPlan, getActiveMealPlan, deleteMealPlan } from '../services/mealPlanService';
+import MealPlanSuccessModal from './MealPlanSuccessModal';
+import WeekCalendar from './WeekCalendar';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -12,7 +14,8 @@ function MedicalMealPlanner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [savedPlan, setSavedPlan] = useState(null);
-  const [viewMode, setViewMode] = useState('generate'); // 'generate' or 'saved'
+  const [viewMode, setViewMode] = useState('generate'); // 'generate', 'saved', 'calendar'
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const userId = 1; // TODO: Get from auth context
 
   const conditionOptions = [
@@ -114,7 +117,7 @@ function MedicalMealPlanner() {
       await saveMealPlan(mealPlan, userId);
       console.log('✅ Meal plan saved manually');
       await loadSavedPlan(); // Reload to update state
-      setViewMode('saved');
+      setShowSuccessModal(true); // Show success popup!
     } catch (err) {
       console.error('Failed to save plan:', err);
       setError('Failed to save meal plan: ' + err.message);
@@ -124,7 +127,7 @@ function MedicalMealPlanner() {
   };
 
   const handleDeletePlan = async () => {
-    if (!savedPlan || !confirm('Are you sure you want to delete this meal plan?')) {
+    if (!savedPlan || !confirm('Are you sure you want to delete this meal plan? This will also remove all tracked progress.')) {
       return;
     }
 
@@ -142,13 +145,19 @@ function MedicalMealPlanner() {
 
   const viewSavedPlan = () => {
     if (savedPlan) {
+      prepareDisplayPlan(savedPlan);
+      setViewMode('saved');
+    }
+  };
+
+  const prepareDisplayPlan = (sourcePlan) => {
       // Convert savedPlan (Java DTO format) to display format
       const displayPlan = {
-        plan_id: savedPlan.planId,
-        duration_days: savedPlan.durationDays,
-        conditions: savedPlan.conditions,
-        summary: savedPlan.summary,
-        daily_meals: savedPlan.dailyMeals.map(day => ({
+        plan_id: sourcePlan.planId,
+        duration_days: sourcePlan.durationDays,
+        conditions: sourcePlan.conditions,
+        summary: sourcePlan.summary,
+        daily_meals: sourcePlan.dailyMeals.map(day => ({
           day: day.day,
           date: day.date,
           total_calories: day.totalCalories,
@@ -159,14 +168,39 @@ function MedicalMealPlanner() {
         }))
       };
       setMealPlan(displayPlan);
-      setViewMode('saved');
+  };
+
+  const handleOpenCalendar = () => {
+    setShowSuccessModal(false);
+    if (!mealPlan && savedPlan) {
+        prepareDisplayPlan(savedPlan);
     }
+    setViewMode('calendar');
   };
 
   return (
     <div className="medical-meal-planner">
       <div className="mmp-container">
+        
+        {/* SUCCESS MODAL POPUP */}
+        {showSuccessModal && (
+          <MealPlanSuccessModal 
+            onOpenCalendar={handleOpenCalendar}
+            onClose={() => setShowSuccessModal(false)}
+          />
+        )}
+
+        {/* CALENDAR VIEW MODE */}
+        {viewMode === 'calendar' && mealPlan && (
+            <WeekCalendar 
+                plan={mealPlan} 
+                onClose={() => setViewMode('saved')}
+                onDelete={handleDeletePlan}
+            />
+        )}
+
         {/* Header */}
+        {viewMode !== 'calendar' && (
         <div className="mmp-header">
           <h1 className="mmp-title">🍽️ Medical Meal Planner</h1>
           <p className="mmp-subtitle">AI-driven nutrition plans for managing health conditions</p>
@@ -179,14 +213,23 @@ function MedicalMealPlanner() {
                 onClick={viewSavedPlan}
                 style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
               >
-                � View Saved Plan ({savedPlan.durationDays} days)
+                📋 View Saved Plan ({savedPlan.durationDays} days)
+              </button>
+              
+              <button 
+                className="mmp-button-primary" 
+                onClick={() => { prepareDisplayPlan(savedPlan); setViewMode('calendar'); }}
+                style={{ fontSize: '0.9rem', padding: '0.5rem 1rem', background: '#4facfe', color: 'white' }}
+              >
+                📅 Calendar View
               </button>
             </div>
           )}
         </div>
+        )}
 
         {/* Configuration Card */}
-        {viewMode === 'generate' && !mealPlan && (
+        {viewMode === 'generate' && !mealPlan && !loading && (
         <div className="mmp-card">
           <h3 className="mmp-section-title">Step 1: Select Your Conditions</h3>
 
@@ -265,7 +308,7 @@ function MedicalMealPlanner() {
         )}
 
         {/* Results Card */}
-        {mealPlan && (
+        {mealPlan && viewMode !== 'calendar' && (
           <div className="mmp-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 className="mmp-results-header" style={{ margin: 0 }}>
@@ -294,22 +337,33 @@ function MedicalMealPlanner() {
                    💾 {loading ? 'Saving...' : 'Save Plan'}
                   </button>
                 ) : (
-                  <button 
-                    className="mmp-button-danger" 
-                    onClick={handleDeletePlan}
-                    style={{ fontSize: '0.9rem', padding: '0.5rem 1rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
-                  >
-                    🗑️ Delete Plan
-                  </button>
+                  viewMode === 'generate' && (
+                    <button 
+                        className="mmp-button-danger" 
+                        onClick={handleDeletePlan}
+                        style={{ fontSize: '0.9rem', padding: '0.5rem 1rem', background: '#dc3545', color: 'white', border: 'none', borderRadius: '0.5rem', cursor: 'pointer' }}
+                    >
+                        🗑️ Delete Plan
+                    </button>
+                  )
                 )}
                 
                 {viewMode === 'saved' && (
-                   <button 
-                     onClick={() => { setMealPlan(null); setViewMode('generate'); }} 
-                     style={{ marginLeft: '10px', padding: '0.5rem', cursor: 'pointer' }}
-                   >
-                     ✖ Close
-                   </button>
+                   <div style={{display: 'flex', gap: '10px'}}>
+                        <button 
+                            onClick={() => setViewMode('calendar')} 
+                            className="mmp-button-primary"
+                            style={{ padding: '0.5rem 1rem', background: '#4facfe', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+                        >
+                            📅 Calendar
+                        </button>
+                       <button 
+                         onClick={() => { setMealPlan(null); setViewMode('generate'); }} 
+                         style={{ padding: '0.5rem', cursor: 'pointer', background: 'transparent', border: '1px solid #ccc', borderRadius: '5px', color: '#ccc' }}
+                       >
+                         ✖ Close
+                       </button>
+                   </div>
                 )}
               </div>
             </div>
