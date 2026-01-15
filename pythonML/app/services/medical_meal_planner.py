@@ -61,7 +61,7 @@ class MedicalMealPlanner:
             daily_meals.append(daily)
         
         # Step 4: Generate shopping list
-        shopping_list = self._generate_shopping_list(daily_meals)
+        shopping_list = self._generate_shopping_list(daily_meals, conditions)
         
         # Step 5: Create summary
         summary = self._generate_plan_summary(
@@ -283,7 +283,7 @@ class MedicalMealPlanner:
         
         return reminders
     
-    def _generate_shopping_list(self, daily_meals: List[Dict]) -> Dict:
+    def _generate_shopping_list(self, daily_meals: List[Dict], conditions: List[str]) -> Dict:
         """
         Generate comprehensive shopping list from all meals
         
@@ -390,7 +390,7 @@ class MedicalMealPlanner:
                 ]
         
         # Condition-specific recommendations
-        condition_tips = self._get_condition_specific_tips()
+        condition_tips = self._get_condition_specific_tips(conditions)
         
         return {
             'total_recipes': len(recipe_names),
@@ -469,11 +469,11 @@ class MedicalMealPlanner:
         
         return tips.get(category, {}).get(item, 'Choose fresh, quality ingredients')
     
-    def _get_condition_specific_tips(self) -> List[str]:
+    def _get_condition_specific_tips(self, conditions: List[str]) -> List[str]:
         """Generate shopping tips based on conditions"""
         tips = []
         
-        for condition in self.conditions:
+        for condition in conditions:
             if condition in self.medical_rules:
                 rules = self.medical_rules[condition]
                 condition_name = rules['display_name']
