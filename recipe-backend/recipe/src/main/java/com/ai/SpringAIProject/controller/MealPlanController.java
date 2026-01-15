@@ -32,20 +32,38 @@ public class MealPlanController {
     }
     
     /**
-     * Save a new meal plan
+     * Save a new meal plan (Idempotent)
      * 
      * POST /api/health/meal-plan/save
      * 
+     * If a plan with the same ID already exists, returns the existing plan
+     * instead of throwing a duplicate key error.
+     * 
      * Request Body: SaveMealPlanRequest
-     * Response: MealPlanResponse (201 Created)
+     * Response: MealPlanResponse (201 Created or 200 OK if already exists)
      */
     @PostMapping("/save")
     public ResponseEntity<MealPlanResponse> saveMealPlan(
             @Valid @RequestBody SaveMealPlanRequest request) {
         
         try {
+            // Check if plan already exists (idempotent operation)
+            String planId = request.getPlanData().getPlanId();
+            
+            if (planId != null && !planId.isEmpty()) {
+                var existingPlan = mealPlanService.getPlanById(planId);
+                
+                if (existingPlan.isPresent()) {
+                    // Plan already exists, return it with 200 OK
+                    System.out.println("Meal plan " + planId + " already exists. Returning existing plan.");
+                    return ResponseEntity.ok(existingPlan.get());
+                }
+            }
+            
+            // Plan doesn't exist, save new plan
             MealPlanResponse response = mealPlanService.saveMealPlan(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
         } catch (Exception e) {
             // Log error (in production, use proper logging)
             System.err.println("Error saving meal plan: " + e.getMessage());
