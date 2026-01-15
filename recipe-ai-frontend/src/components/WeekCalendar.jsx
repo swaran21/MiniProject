@@ -64,6 +64,11 @@ function WeekCalendar({ plan, onClose, onDelete }) {
     return dateString === today;
   };
 
+  // Calculate progress
+  const totalDays = plan.duration_days;
+  const completedCount = Object.values(completedDays).filter(Boolean).length;
+  const progressPercent = totalDays > 0 ? (completedCount / totalDays) * 100 : 0;
+
   return (
     <div className="week-calendar">
       {/* Calendar Header */}
@@ -72,6 +77,22 @@ function WeekCalendar({ plan, onClose, onDelete }) {
           <h2>📅 Weekly Schedule</h2>
           <div className="calendar-stats">
             Plan Duration: {plan.duration_days} Days • Total Weeks: {totalWeeks}
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="progress-container">
+            <div className="progress-info">
+              <span className="progress-text">
+                Progress: {completedCount} of {totalDays} days completed
+              </span>
+              <span className="progress-percent">{Math.round(progressPercent)}%</span>
+            </div>
+            <div className="progress-bar-bg">
+              <div 
+                className="progress-bar-fill" 
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
           </div>
         </div>
 
