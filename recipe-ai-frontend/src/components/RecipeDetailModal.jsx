@@ -60,9 +60,9 @@ function RecipeDetailModal({ recipeId, recipeName, mealType, onClose }) {
         {recipe && !loading && (
           <div className="recipe-content">
             {/* Recipe Image */}
-            {recipe.image && (
+            {recipe.imageUrl && (
               <div className="recipe-image-container">
-                <img src={recipe.image} alt={recipe.title} className="recipe-image" />
+                <img src={recipe.imageUrl} alt={recipe.title} className="recipe-image" />
               </div>
             )}
 
@@ -73,20 +73,8 @@ function RecipeDetailModal({ recipeId, recipeName, mealType, onClose }) {
                 <span className="nutrition-value">{recipe.calories || 'N/A'}</span>
               </div>
               <div className="nutrition-item">
-                <span className="nutrition-label">Protein</span>
-                <span className="nutrition-value">{recipe.protein || 'N/A'}g</span>
-              </div>
-              <div className="nutrition-item">
-                <span className="nutrition-label">Carbs</span>
-                <span className="nutrition-value">{recipe.carbs || 'N/A'}g</span>
-              </div>
-              <div className="nutrition-item">
-                <span className="nutrition-label">Fats</span>
-                <span className="nutrition-value">{recipe.fats || 'N/A'}g</span>
-              </div>
-              <div className="nutrition-item">
-                <span className="nutrition-label">Health Score</span>
-                <span className="nutrition-value">❤️ {recipe.healthScore || 100}</span>
+                <span className="nutrition-label">Cuisine</span>
+                <span className="nutrition-value">{recipe.cuisineType || 'N/A'}</span>
               </div>
             </div>
 
@@ -103,26 +91,14 @@ function RecipeDetailModal({ recipeId, recipeName, mealType, onClose }) {
             )}
 
             {/* Instructions */}
-            {recipe.instructions && recipe.instructions.length > 0 && (
+            {recipe.instructions && (
               <div className="recipe-section">
                 <h3>👨‍🍳 Instructions</h3>
-                <ol className="instructions-list">
-                  {recipe.instructions.map((step, index) => (
-                    <li key={index}>{step}</li>
-                  ))}
-                </ol>
+                <div className="instructions-text">
+                  {recipe.instructions}
+                </div>
               </div>
             )}
-
-            {/* Additional Info */}
-            <div className="recipe-meta">
-              {recipe.readyInMinutes && (
-                <span className="meta-item">⏱️ {recipe.readyInMinutes} min</span>
-              )}
-              {recipe.servings && (
-                <span className="meta-item">🍽️ {recipe.servings} servings</span>
-              )}
-            </div>
           </div>
         )}
       </div>
