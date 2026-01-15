@@ -179,7 +179,7 @@ function MedicalMealPlanner() {
                 onClick={viewSavedPlan}
                 style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}
               >
-                📋 View Saved Plan ({savedPlan.durationDays} days)
+                � View Saved Plan ({savedPlan.durationDays} days)
               </button>
             </div>
           )}
