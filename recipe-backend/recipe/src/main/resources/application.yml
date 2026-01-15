@@ -43,9 +43,3 @@ jwt:
   secret: YourSuperSecretKeyForJWT256BitsLongMinimumForHS256AlgorithmSecurityProductionKeyGoesHere
   expiration: 900000  # 15 minutes
   refresh-expiration: 604800000  # 7 days
-
-
-jwt:
-  secret: ${JWT_SECRET}
-  expiration: ${JWT_TOKEN_EXPIRATION}
-  refresh-expiration: ${JWT_REFRESH_TOKEN_EXP}
