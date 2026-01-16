@@ -16,10 +16,6 @@ function AppContent() {
   const { user, isAuthenticated, logout, loading } = useAuth();
   const [activeTab, setActiveTab] = useState("diet");
 
-  const handleLoginSuccess = () => {
-    // Login handled by AuthContext, just for compatibility
-  };
-
   if (loading) {
     return (
       <div style={{ 
@@ -34,8 +30,9 @@ function AppContent() {
   }
 
   // If not logged in, show login screen
+  // When AuthContext.isAuthenticated changes to true, this re-renders automatically
   if (!isAuthenticated) {
-    return <LoginComponent onLoginSuccess={handleLoginSuccess} />;
+    return <LoginComponent />;
   }
 
   // Main App (User is logged in)

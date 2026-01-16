@@ -38,8 +38,7 @@ logging:
     org.hibernate.type.descriptor.sql: TRACE
     com.ai.SpringAIProject: DEBUG
 
-# JWT Configuration
 jwt:
   secret: YourSuperSecretKeyForJWT256BitsLongMinimumForHS256AlgorithmSecurityProductionKeyGoesHere
-  expiration: 900000  # 15 minutes
-  refresh-expiration: 604800000  # 7 days
+  expiration: 900000
+  refresh-expiration: 604800000

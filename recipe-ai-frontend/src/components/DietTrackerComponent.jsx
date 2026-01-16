@@ -1,13 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import apiClient from "../utils/apiClient";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function DietTrackerComponent({ user }) {
+function DietTrackerComponent({ userId }) {
   const [foodItem, setFoodItem] = useState("");
   const [mealType, setMealType] = useState("Lunch");
   const [recommendation, setRecommendation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [userProfile, setUserProfile] = useState(null);
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await apiClient.get(`/api/users/${userId}`);
+        setUserProfile(response.data);
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+        // Continue without profile data
+      }
+    };
+
+    if (userId) {
+      fetchUserProfile();
+    }
+  }, [userId]);
 
   const getAdvice = async (e) => {
     e.preventDefault();
@@ -22,16 +41,9 @@ function DietTrackerComponent({ user }) {
     };
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/diet/recommend?userId=${user.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Failed to get advice");
-      const data = await response.json();
-      console.log("API Response:", data);
-      setRecommendation(data);
+      const response = await apiClient.post(`/api/diet/recommend?userId=${userId}`, payload);
+      console.log("API Response:", response.data);
+      setRecommendation(response.data);
     } catch (err) {
       console.error(err);
       setError("System Error. Ensure Java Backend (8080) & Python ML (5000) are running.");
@@ -47,9 +59,11 @@ function DietTrackerComponent({ user }) {
         Log your meals and get AI-powered recommendations for the rest of your day.
       </p>
 
-      <div style={{ background: "#e3f2fd", padding: "15px", borderRadius: "8px", marginBottom: "20px" }}>
-        <strong>Your Profile:</strong> {user.age || "N/A"} yrs, {user.weightKg || "N/A"}kg, Goal: {user.healthGoals || "Balanced"}
-      </div>
+      {userProfile && (
+        <div style={{ background: "#e3f2fd", padding: "15px", borderRadius: "8px", marginBottom: "20px" }}>
+          <strong>Your Profile:</strong> {userProfile.age || "N/A"} yrs, {userProfile.weightKg || "N/A"}kg, Goal: {userProfile.healthGoals || "Balanced"}
+        </div>
+      )}
 
       <form onSubmit={getAdvice}>
         <h4 style={{ margin: "0 0 10px 0", color: "#444" }}>Log Your Meal</h4>

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
-function LoginComponent({ onLoginSuccess }) {
+function LoginComponent() {
   const { login, register } = useAuth();
   const [authMode, setAuthMode] = useState("login");
   const [username, setUsername] = useState("");
@@ -32,12 +32,11 @@ function LoginComponent({ onLoginSuccess }) {
         });
       }
 
-      if (result.success) {
-        // Login/register successful, call parent callback
-        onLoginSuccess({ username });
-      } else {
+      if (!result.success) {
         setError(result.error || "Authentication failed");
       }
+      // If success, AuthContext updates isAuthenticated -> App.jsx auto-redirects
+      
     } catch (err) {
       setError(err.message || "Authentication failed. Please try again.");
     } finally {
