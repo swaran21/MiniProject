@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './RecipeDetailModal.css';
+import apiClient from '../utils/apiClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -9,23 +10,22 @@ function RecipeDetailModal({ recipeId, recipeName, mealType, onClose }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchRecipeDetails();
+    if (recipeId) {
+      fetchRecipeDetails();
+    } else {
+      setError("Recipe ID missing");
+      setLoading(false);
+    }
   }, [recipeId]);
 
   const fetchRecipeDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/recipes/${recipeId}/details`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch recipe: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setRecipe(data);
+      const response = await apiClient.get(`/api/recipes/${recipeId}/details`);
+      setRecipe(response.data);
     } catch (err) {
       console.error("Error fetching recipe details:", err);
-      setError(err.message);
+      setError("Failed to load recipe. Please try again.");
     } finally {
       setLoading(false);
     }

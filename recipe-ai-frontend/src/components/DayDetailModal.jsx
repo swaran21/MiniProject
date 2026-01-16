@@ -105,7 +105,7 @@ function DayDetailModal({ day, onClose }) {
       {/* Recipe Detail Modal (nested) */}
       {selectedMeal && (
         <RecipeDetailModal
-          recipeId={selectedMeal.recipeId}
+          recipeId={selectedMeal.id || selectedMeal.recipeId} /* Handle both cases */
           recipeName={selectedMeal.title}
           mealType={selectedMeal.mealType}
           onClose={() => setSelectedMeal(null)}
