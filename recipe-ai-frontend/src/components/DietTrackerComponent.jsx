@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import apiClient from "../utils/apiClient";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function DietTrackerComponent({ userId }) {
+function DietTrackerComponent() {
+  const { user } = useAuth();
+  const userId = user?.id; // Derived from context instead of props
   const [foodItem, setFoodItem] = useState("");
   const [mealType, setMealType] = useState("Lunch");
   const [recommendation, setRecommendation] = useState(null);

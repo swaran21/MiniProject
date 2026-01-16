@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import apiClient from '../utils/apiClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -9,7 +10,7 @@ function RecipeRating({ recipeId, user }) {
 
   // Fetch current rating stats on mount
   React.useEffect(() => {
-    console.log("RecipeRating mounted with recipeId:", recipeId); // Debug
+    // console.log("RecipeRating mounted with recipeId:", recipeId); // Debug
     if (recipeId) {
       fetchRating();
     }
@@ -17,15 +18,13 @@ function RecipeRating({ recipeId, user }) {
 
   const fetchRating = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/recipes/${recipeId}/rating`);
-      if (response.ok) {
-        const data = await response.json();
-        setStats({
-          likes: data.likes || 0,
-          dislikes: data.dislikes || 0,
-          total_ratings: data.total_ratings || 0
-        });
-      }
+      const response = await apiClient.get(`/api/recipes/${recipeId}/rating`);
+      const data = response.data;
+      setStats({
+        likes: data.likes || 0,
+        dislikes: data.dislikes || 0,
+        total_ratings: data.total_ratings || 0
+      });
     } catch (error) {
       console.error('Failed to fetch rating:', error);
     }
@@ -34,25 +33,32 @@ function RecipeRating({ recipeId, user }) {
   const handleRating = async (ratingValue) => {
     setLoading(true);
     
-    const userId = user?.id || 'anonymous';
+    const userId = user?.id; // Allow null for anonymous (if allowed) or handle error
     
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/recipes/${recipeId}/rate?rating=${ratingValue}&userId=${userId}`,
-        { method: 'POST' }
+      const response = await apiClient.post(
+        `/api/recipes/${recipeId}/rate`,
+        null, // No body
+        {
+            params: {
+                rating: ratingValue,
+                userId: userId || 'anonymous'
+            }
+        }
       );
       
-      if (response.ok) {
-        const data = await response.json();
-        setRating(ratingValue);
-        setStats({
-          likes: data.likes || 0,
-          dislikes: data.dislikes || 0,
-          total_ratings: data.total_ratings || 0
-        });
-      }
+      const data = response.data;
+      setRating(ratingValue);
+      setStats({
+        likes: data.likes || 0,
+        dislikes: data.dislikes || 0,
+        total_ratings: data.total_ratings || 0
+      });
     } catch (error) {
       console.error('Failed to rate recipe:', error);
+      if (error.response?.status === 403) {
+          alert("Please log in to rate recipes.");
+      }
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-
+import apiClient from '../utils/apiClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
@@ -19,15 +19,13 @@ function PrescriptionAnalyzer() {
     setError(null);
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/health/analyze-prescription?prescriptionText=${encodeURIComponent(prescriptionText)}`,
-        { method: 'POST' }
+      const response = await apiClient.post(
+        `/api/health/analyze-prescription`, 
+        null, 
+        { params: { prescriptionText } }
       );
 
-      if (!response.ok) throw new Error('Analysis failed');
-
-      const data = await response.json();
-      setAnalysis(data);
+      setAnalysis(response.data);
     } catch (err) {
       setError('Failed to analyze prescription. Please try again.');
       console.error(err);
@@ -105,12 +103,13 @@ function PrescriptionAnalyzer() {
                       const formData = new FormData();
                       formData.append('file', file);
                       
-                      const response = await fetch(`${API_BASE_URL}/api/health/ocr/extract-text`, {
-                        method: 'POST',
-                        body: formData
+                      const response = await apiClient.post('/api/health/ocr/extract-text', formData, {
+                        headers: {
+                          'Content-Type': 'multipart/form-data',
+                        },
                       });
                       
-                      const data = await response.json();
+                      const data = response.data;
                       
                       if (data.success) {
                         setPrescriptionText(data.text);

@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import RecipeRating from './RecipeRating';
+import apiClient from '../utils/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function BrowseRecipes({ user }) {
+function BrowseRecipes() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState([]);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -19,15 +22,14 @@ function BrowseRecipes({ user }) {
     setError(null);
     
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/recipes/search?query=${encodeURIComponent(searchQuery)}&limit=20`
-      );
+      const response = await apiClient.get(`/api/recipes/search`, {
+        params: {
+          query: searchQuery,
+          limit: 20
+        }
+      });
       
-      if (!response.ok) {
-        throw new Error('Search failed');
-      }
-      
-      const data = await response.json();
+      const data = response.data;
       console.log('Search results:', data); // Debug
       setResults(data);
       
@@ -44,8 +46,8 @@ function BrowseRecipes({ user }) {
 
   const loadRecipeDetails = async (recipeId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/recipes/${recipeId}/details`);
-      const data = await response.json();
+      const response = await apiClient.get(`/api/recipes/${recipeId}/details`);
+      const data = response.data;
       console.log('Recipe details:', data); // Debug
       setSelectedRecipe(data);
       window.scrollTo({ top: 0, behavior: 'smooth' });

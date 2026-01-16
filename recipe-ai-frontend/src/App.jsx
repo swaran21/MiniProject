@@ -48,13 +48,13 @@ function AppContent() {
       <div className="main-content">
         <ChatWidget />
 
-        {activeTab === "diet" && <DietTrackerComponent userId={user?.id} />}
-        {activeTab === "health" && <HealthProfileComponent userId={user?.id} />}
-        {activeTab === "recipe" && <RecipeComponent userId={user?.id} />}
-        {activeTab === "meal-plan" && <MealPlanComponent userId={user?.id} />}
-        {activeTab === "browse" && <BrowseRecipes userId={user?.id} />}
-        {activeTab === "prescription" && <PrescriptionAnalyzer userId={user?.id} />}
-        {activeTab === "medical-meals" && <MedicalMealPlanner userId={user?.id} />}
+        {activeTab === "diet" && <DietTrackerComponent />}
+        {activeTab === "health" && <HealthProfileComponent />}
+        {activeTab === "recipe" && <RecipeComponent />}
+        {activeTab === "meal-plan" && <MealPlanComponent />}
+        {activeTab === "browse" && <BrowseRecipes />}
+        {activeTab === "prescription" && <PrescriptionAnalyzer />}
+        {activeTab === "medical-meals" && <MedicalMealPlanner />}
       </div>
     </div>
   );

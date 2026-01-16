@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
 import RecipeRating from "./RecipeRating";
+import apiClient from "../utils/apiClient";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function RecipeComponent({ user }) {
+function RecipeComponent() {
+  const { user } = useAuth();
+  
   const [ingredients, setIngredients] = useState("");
   const [cuisine, setCuisine] = useState("");
   const [recipe, setRecipe] = useState(null);
@@ -13,16 +17,15 @@ function RecipeComponent({ user }) {
 
   // Load saved recipes on mount
   useEffect(() => {
-    if (user && user.id) {
+    if (user) {
       fetchSavedRecipes();
     }
   }, [user]);
 
   const fetchSavedRecipes = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/recipes/saved?userId=${user.id}`);
-      const data = await response.json();
-      setSavedRecipes(data);
+      const response = await apiClient.get(`/api/recipes/saved?userId=${user.id}`);
+      setSavedRecipes(response.data);
     } catch (error) {
       console.error("Failed to fetch saved recipes:", error);
     }
@@ -34,49 +37,42 @@ function RecipeComponent({ user }) {
     setRecipe(null);
     
     try {
-      const params = new URLSearchParams({
-        ingredients: ingredients,
-        cuisine: cuisine || "any",
+      // Use URLSearchParams for query params
+      const response = await apiClient.get(`/api/recipes/generate`, {
+        params: {
+            ingredients: ingredients,
+            cuisine: cuisine || "any",
+            userId: user?.id
+        }
       });
-      
-      if (user && user.id) {
-        params.append("userId", user.id);
-      }
 
-      const response = await fetch(`${API_BASE_URL}/api/recipes/generate?${params}`);
-      const data = await response.json();
-      console.log("Recipe received:", data); // Debug: Check if ID exists
-      setRecipe(data);
+      console.log("Recipe received:", response.data);
+      setRecipe(response.data);
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error generating recipe:", error);
+      if (error.response?.status === 403) {
+          alert("Session expired or access denied. Please log in again.");
+      } else {
+          alert("Error generating recipe. Ensure backend is running.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const saveRecipe = async () => {
-    if (!user || !user.id) {
+    if (!user) {
       alert("Please log in to save recipes");
       return;
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/recipes/save?userId=${user.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(recipe)
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        alert("Recipe saved!");
-        fetchSavedRecipes();
-      } else {
-        alert("Failed: " + (data.error || "Unknown error"));
-      }
+      await apiClient.post(`/api/recipes/save?userId=${user.id}`, recipe);
+      alert("Recipe saved!");
+      fetchSavedRecipes();
     } catch (error) {
       console.error("Error saving:", error);
-      alert("Failed to save recipe");
+      alert("Failed to save recipe: " + (error.response?.data?.error || error.message));
     }
   };
 
@@ -84,16 +80,12 @@ function RecipeComponent({ user }) {
     if (!confirm("Delete this recipe?")) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/recipes/saved/${savedId}?userId=${user.id}`, {
-        method: "DELETE"
-      });
-      
-      if (response.ok) {
-        alert("Deleted!");
-        fetchSavedRecipes();
-      }
+      await apiClient.delete(`/api/recipes/saved/${savedId}?userId=${user.id}`);
+      alert("Deleted!");
+      fetchSavedRecipes();
     } catch (error) {
       console.error("Error deleting:", error);
+      alert("Failed to delete recipe");
     }
   };
 
@@ -102,7 +94,7 @@ function RecipeComponent({ user }) {
       {/* Header with toggle button */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <h2>🍳 AI Recipe Generator</h2>
-        {user && user.id && (
+        {user && (
           <button 
             onClick={() => setShowSaved(!showSaved)}
             style={{ 
@@ -160,7 +152,7 @@ function RecipeComponent({ user }) {
             <div className="result-card" style={{ marginTop: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
                 <h3 style={{ margin: 0 }}>{recipe.title}</h3>
-                {user && user.id && (
+                {user && (
                   <button 
                     onClick={saveRecipe}
                     style={{ 
@@ -222,7 +214,7 @@ function RecipeComponent({ user }) {
               textAlign: "center", 
               padding: "40px 20px", 
               background: "#f5f5f5", 
-              borderRadius: "10px",
+              borderRadius: "10px", 
               border: "2px dashed #ccc"
             }}>
               <p style={{ fontSize: "48px", margin: "0 0 10px 0" }}>📭</p>
@@ -238,7 +230,7 @@ function RecipeComponent({ user }) {
                   color: "white", 
                   border: "none", 
                   borderRadius: "6px", 
-                  cursor: "pointer",
+                  cursor: "pointer", 
                   fontSize: "14px"
                 }}
               >
@@ -284,7 +276,7 @@ function RecipeComponent({ user }) {
                       cursor: "pointer", 
                       padding: "8px", 
                       background: "#f5f5f5", 
-                      borderRadius: "4px",
+                      borderRadius: "4px", 
                       fontWeight: "500"
                     }}>
                       👁️ View Full Recipe

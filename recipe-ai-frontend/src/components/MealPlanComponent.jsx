@@ -1,8 +1,11 @@
 import React, { useState } from "react";
+import apiClient from "../utils/apiClient";
+import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-function MealPlanComponent({ user }) {
+function MealPlanComponent() {
+  const { user } = useAuth();
   const [mealPlan, setMealPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -14,18 +17,9 @@ function MealPlanComponent({ user }) {
     setMealPlan(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/meal-plan/generate?userId=${user.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}), // Backend will fetch user profile
-      });
+      const response = await apiClient.post(`/api/meal-plan/generate?userId=${user.id}`, {});
 
-      if (!response.ok) {
-        throw new Error("Failed to generate plan");
-      }
-
-      const data = await response.json();
-      setMealPlan(data);
+      setMealPlan(response.data);
     } catch (err) {
       console.error("Error:", err);
       setError("Could not generate plan. Ensure backend is running.");

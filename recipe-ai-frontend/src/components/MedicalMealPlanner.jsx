@@ -3,10 +3,13 @@ import './MedicalMealPlanner.css';
 import { saveMealPlan, getActiveMealPlan, deleteMealPlan } from '../services/mealPlanService';
 import MealPlanSuccessModal from './MealPlanSuccessModal';
 import WeekCalendar from './WeekCalendar';
+import apiClient from '../utils/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 function MedicalMealPlanner() {
+  const { user } = useAuth();
   const [conditions, setConditions] = useState([]);
   const [newCondition, setNewCondition] = useState('');
   const [duration, setDuration] = useState(30);
@@ -16,7 +19,7 @@ function MedicalMealPlanner() {
   const [savedPlan, setSavedPlan] = useState(null);
   const [viewMode, setViewMode] = useState('generate'); // 'generate', 'saved', 'calendar'
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const userId = 1; // TODO: Get from auth context
+  const userId = user?.id;
 
   const conditionOptions = [
     'diabetes_type2',
@@ -52,26 +55,13 @@ function MedicalMealPlanner() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/health/generate-meal-plan`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conditions,
-          duration_days: duration,
-          user_id: 1
-        })
+      const response = await apiClient.post(`/api/health/generate-meal-plan`, {
+        conditions,
+        duration_days: duration,
+        user_id: 1 // TODO: Get from auth context properly if needed
       });
 
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-      }
-
-      const text = await response.text();
-      if (!text) {
-        throw new Error('Empty response from server. Please check backend logs.');
-      }
-
-      const data = JSON.parse(text);
+      const data = response.data;
       if (data.error) {
         throw new Error(data.error);
       }
@@ -82,10 +72,12 @@ function MedicalMealPlanner() {
     } catch (err) {
       console.error('Meal Plan Generation Error:', err);
       // Backend might be offline or blocked
-      if (err.message.includes('Failed to fetch')) {
+      if (err.code === 'ERR_NETWORK') {
         setError("Could not connect to server. Is the backend running?");
+      } else if (err.response && err.response.status === 403) {
+         setError("Access denied. Please log in again.");
       } else {
-        setError(err.message);
+        setError(err.message || "An unexpected error occurred");
       }
     } finally {
       setLoading(false);

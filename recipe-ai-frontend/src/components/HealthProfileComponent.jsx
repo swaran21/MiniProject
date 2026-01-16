@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
+import apiClient from "../utils/apiClient";
+import { useAuth } from "../context/AuthContext";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
-
-function HealthProfileComponent({ user, onUpdateProfile }) {
+function HealthProfileComponent({ onUpdateProfile }) {
+  const { user } = useAuth();
+  
   const [formData, setFormData] = useState({
     weightKg: "",
     heightCm: "",
@@ -13,6 +15,7 @@ function HealthProfileComponent({ user, onUpdateProfile }) {
   });
   const [result, setResult] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Load user data on mount
   useEffect(() => {
@@ -33,17 +36,15 @@ function HealthProfileComponent({ user, onUpdateProfile }) {
   };
 
   const saveProfile = async () => {
+    if (!user) return;
+
     if (onUpdateProfile) {
       onUpdateProfile(formData);
     }
     
     // Also update in backend
     try {
-      await fetch(`${API_BASE_URL}/api/auth/profile/${user.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      });
+      await apiClient.put(`/api/auth/profile/${user.id}`, formData);
       setIsEditing(false);
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -52,43 +53,33 @@ function HealthProfileComponent({ user, onUpdateProfile }) {
 
   const analyzeHealth = async (e) => {
     e.preventDefault();
+    if (!user) {
+        setResult({ error: "User not authenticated." });
+        return;
+    }
+
+    setResult(null);
+    setLoading(true);
 
     try {
-      // NOTE: Using the new HealthController endpoint
-      // We need to implement this endpoint in Java or use an existing one.
-      // For now, let's assume we want to get a general diet recommendation based on profile.
-      // The DietService in Python has `recommend` (adaptive-diet).
-      // Let's redirect to that via Java if possible, or create a new endpoint.
-      // Actually, looking at the UI, it expects BMI and Calorie needs.
-      // This logic is usually simple calculation, can be done in frontend or backend.
-      // Since it was failing 403, and invalid JSON, let's fix the endpoint.
-      
-      // Let's implement client-side calculation for BMI/Calories as a fallback if API fails, 
-      // OR fix the API. The user wants the API to work.
-      // The error was 403 (Forbidden). 
-      // Let's change the endpoint to one that exists or create it.
-      // There is NO /api/health/analyze in HealthController.
-      // Let's try /api/health/analyze-profile if we create it.
-      
-      // For now, I'll update it to use the endpoint I will create: /api/health/analyze-profile
-      const response = await fetch(`${API_BASE_URL}/api/health/analyze-profile?userId=${user.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
-      });
-      
-      if (!response.ok) {
-          if (response.status === 403) throw new Error("Access Denied (403). Check Java Security Config.");
-          throw new Error(`Server responded with ${response.status}`);
-      }
-
-      const data = await response.json();
-      setResult(data);
+      // Use the new endpoint we verified earlier
+      const response = await apiClient.post(`/api/health/analyze-profile`, formData);
+      setResult(response.data);
     } catch (error) {
       console.error("Error:", error);
-      setResult({ error: "Could not analyze. Please ensure backend is running." });
+      if (error.response && error.response.status === 403) {
+          setResult({ error: "Access Denied. Please log in again." });
+      } else {
+          setResult({ error: "Could not analyze. Please ensure backend is running." });
+      }
+    } finally {
+        setLoading(false);
     }
   };
+
+  if (!user) {
+      return <div className="component-card">Loading profile...</div>;
+  }
 
   return (
     <div className="component-card">
@@ -184,8 +175,8 @@ function HealthProfileComponent({ user, onUpdateProfile }) {
           </select>
         </div>
         
-        <button type="submit" className="action-button full-width" style={{ gridColumn: "1 / -1" }}>
-          Analyze My Health
+        <button type="submit" className="action-button full-width" style={{ gridColumn: "1 / -1" }} disabled={loading}>
+          {loading ? "Analyzing..." : "Analyze My Health"}
         </button>
       </form>
 
