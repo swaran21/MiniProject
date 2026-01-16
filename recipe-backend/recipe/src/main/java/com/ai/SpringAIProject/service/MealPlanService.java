@@ -34,14 +34,40 @@ public class MealPlanService {
     private final MealPlanRepository mealPlanRepository;
     private final MealPlanDayRepository mealPlanDayRepository;
     private final MealPlanMapper mapper;
+    private final MLBridgeService mlBridgeService;
+    private final com.ai.SpringAIProject.repository.UserRepository userRepository;
     
     public MealPlanService(
             MealPlanRepository mealPlanRepository,
             MealPlanDayRepository mealPlanDayRepository,
-            MealPlanMapper mapper) {
+            MealPlanMapper mapper,
+            MLBridgeService mlBridgeService,
+            com.ai.SpringAIProject.repository.UserRepository userRepository) {
         this.mealPlanRepository = mealPlanRepository;
         this.mealPlanDayRepository = mealPlanDayRepository;
         this.mapper = mapper;
+        this.mlBridgeService = mlBridgeService;
+        this.userRepository = userRepository;
+    }
+
+    /**
+     * Generate a general meal plan based on user profile
+     */
+    public MealPlanResponseDTO generateGeneralMealPlan(Long userId) {
+        com.ai.SpringAIProject.model.User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        UserProfileDTO profile = new UserProfileDTO(
+                user.getWeightKg() != null ? user.getWeightKg() : 70.0,
+                user.getHeightCm() != null ? user.getHeightCm() : 170.0,
+                user.getAge() != null ? user.getAge() : 30,
+                user.getGender() != null ? user.getGender() : "M",
+                user.getActivityLevel() != null ? user.getActivityLevel() : "Moderate",
+                user.getHealthGoals() != null ? user.getHealthGoals() : "Balanced",
+                user.getDietaryRestrictions() != null ? user.getDietaryRestrictions() : "None"
+        );
+
+        return mlBridgeService.generateMealPlan(profile);
     }
     
     /**

@@ -9,7 +9,7 @@ function Sidebar({ activeTab, setActiveTab, user, onLogout }) {
     { id: 'diet', label: 'Smart Diet', icon: '🥗' },
     { id: 'recipe', label: 'Recipe Generator', icon: '🧑‍🍳' },
     { id: 'browse', label: 'Browse Recipes', icon: '🔍' },
-    { id: 'mealplan', label: 'Meal Planner', icon: '❤️' },
+    { id: 'meal-plan', label: 'Meal Planner', icon: '❤️' },
     { id: 'prescription', label: 'Prescription', icon: '🏥' },
     { id: 'medical-meals', label: 'Medical Meals', icon: '💊' },
   ];

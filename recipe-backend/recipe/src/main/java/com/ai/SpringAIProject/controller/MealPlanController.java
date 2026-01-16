@@ -44,7 +44,26 @@ public class MealPlanController {
      * Request Body: SaveMealPlanRequest
      * Response: MealPlanResponse (201 Created or 200 OK if already exists)
      */
-    @PostMapping("/save")
+    @PostMapping("/generate")
+    public ResponseEntity<MealPlanResponseDTO> generatePlan(@RequestParam Long userId) {
+        try {
+            return ResponseEntity.ok(mealPlanService.generateGeneralMealPlan(userId));
+        } catch (Exception e) {
+            System.err.println("Error generating meal plan: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * POST /api/health/meal-plan/save
+     * 
+     * If a plan with the same ID already exists, returns the existing plan
+     * instead of throwing a duplicate key error.
+     * 
+     * Request Body: SaveMealPlanRequest
+     * Response: MealPlanResponse (201 Created or 200 OK if already exists)
+     */
+    @PostMapping("/create")
     public ResponseEntity<MealPlanResponse> saveMealPlan(
             @Valid @RequestBody SaveMealPlanRequest request) {
         

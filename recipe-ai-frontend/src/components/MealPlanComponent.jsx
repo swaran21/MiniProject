@@ -17,7 +17,9 @@ function MealPlanComponent() {
     setMealPlan(null);
 
     try {
-      const response = await apiClient.post(`/api/meal-plan/generate?userId=${user.id}`, {});
+      const response = await apiClient.post(`/api/health/meal-plan/generate`, null, {
+        params: { userId: user.id }
+      });
 
       setMealPlan(response.data);
     } catch (err) {
