@@ -42,11 +42,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwt != null && jwtTokenProvider.validateToken(jwt)) {
                 // Extract user details from token
                 String username = jwtTokenProvider.getUsernameFromToken(jwt);
-                String roles = jwtTokenProvider.getRolesFromToken(jwt);
+                String roles = jwtTokenProvider.getRolesFromToken(jwt); // e.g. "USER,ADMIN" or "ROLE_USER"
 
                 // Parse roles to authorities
                 List<SimpleGrantedAuthority> authorities = Arrays.stream(roles.split(","))
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role.trim()))
+                        .map(role -> {
+                             String trimmedRole = role.trim();
+                             if (!trimmedRole.startsWith("ROLE_")) {
+                                 return "ROLE_" + trimmedRole;
+                             }
+                             return trimmedRole;
+                        })
+                        .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
                 // Create authentication token

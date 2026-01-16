@@ -95,6 +95,9 @@ public class JwtTokenProvider {
      * Get claims from token
      */
     private Claims getClaims(String token) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()

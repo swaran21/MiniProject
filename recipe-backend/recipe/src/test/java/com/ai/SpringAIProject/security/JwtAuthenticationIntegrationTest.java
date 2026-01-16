@@ -3,8 +3,6 @@ package com.ai.SpringAIProject.security;
 import com.ai.SpringAIProject.dto.LoginRequest;
 import com.ai.SpringAIProject.dto.LoginResponse;
 import com.ai.SpringAIProject.dto.RegisterRequest;
-import com.ai.SpringAIProject.model.User;
-import com.ai.SpringAIProject.repository.UserRepository;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,16 +10,36 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
+
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for JWT Authentication
- * Tests the complete authentication flow from registration to protected endpoint access
+ * Verifies the complete authentication flow:
+ * 1. User Registration
+ * 2. Login & Token Generation
+ * 3. Accessing Protected Endpoints
+ * 4. Token Refresh
+ * 5. Security & Unauthorized Access Handling
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @ActiveProfiles("test")
+@TestPropertySource(properties = {
+    "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+    "spring.datasource.driverClassName=org.h2.Driver",
+    "spring.datasource.username=sa",
+    "spring.datasource.password=password",
+    "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
+    "jwt.secret=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
+    "jwt.expiration=3600000",
+    "jwt.refresh-expiration=86400000"
+})
 class JwtAuthenticationIntegrationTest {
 
     @LocalServerPort
@@ -29,9 +47,6 @@ class JwtAuthenticationIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
-
-    @Autowired
-    private UserRepository userRepository;
 
     private String baseUrl;
     private static String accessToken;
@@ -45,11 +60,11 @@ class JwtAuthenticationIntegrationTest {
 
     @Test
     @Order(1)
-    @DisplayName("1. Should register new user and return JWT tokens")
+    @DisplayName("1. Should successfully register a new user")
     void testUserRegistration() {
         // Arrange
         RegisterRequest request = new RegisterRequest();
-        request.setUsername("testuser_" + System.currentTimeMillis());
+        request.setUsername("testuser_" + Instant.now().toEpochMilli());
         request.setPassword("Test123!");
         request.setAge(30);
         request.setGender("M");
@@ -74,32 +89,20 @@ class JwtAuthenticationIntegrationTest {
         assertThat(response.getBody().getUserId()).isNotNull();
         assertThat(response.getBody().getRoles()).contains("USER");
 
-        // Save for next tests
+        // Store artifacts for subsequent tests
         accessToken = response.getBody().getAccessToken();
         refreshToken = response.getBody().getRefreshToken();
         userId = response.getBody().getUserId();
-
-        System.out.println("✅ Registration successful. Access Token: " + accessToken.substring(0, 20) + "...");
     }
 
     @Test
     @Order(2)
-    @DisplayName("2. Should login with valid credentials")
+    @DisplayName("2. Should successfully login with valid credentials")
     void testUserLogin() {
-        // First, create a user
-        String username = "logintest_" + System.currentTimeMillis();
-        RegisterRequest registerRequest = new RegisterRequest();
-        registerRequest.setUsername(username);
-        registerRequest.setPassword("Test123!");
-        registerRequest.setAge(25);
+        // Arrange - Create a fresh user for login test
+        String username = "logintest_" + Instant.now().toEpochMilli();
+        populateUser(username, "Test123!");
 
-        restTemplate.postForEntity(
-                baseUrl + "/api/auth/register",
-                registerRequest,
-                LoginResponse.class
-        );
-
-        // Arrange
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setUsername(username);
         loginRequest.setPassword("Test123!");
@@ -115,8 +118,7 @@ class JwtAuthenticationIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getAccessToken()).isNotBlank();
-
-        System.out.println("✅ Login successful");
+        assertThat(response.getBody().getRefreshToken()).isNotBlank();
     }
 
     @Test
@@ -125,7 +127,7 @@ class JwtAuthenticationIntegrationTest {
     void testInvalidLogin() {
         // Arrange
         LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setUsername("nonexistent");
+        loginRequest.setUsername("nonexistent_user");
         loginRequest.setPassword("wrongpassword");
 
         // Act
@@ -137,13 +139,11 @@ class JwtAuthenticationIntegrationTest {
 
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-
-        System.out.println("✅ Invalid login rejected");
     }
 
     @Test
     @Order(4)
-    @DisplayName("4. Should access protected endpoint with valid token")
+    @DisplayName("4. Should access protected endpoint with valid JWT token")
     void testProtectedEndpointWithToken() {
         // Arrange
         HttpHeaders headers = new HttpHeaders();
@@ -158,16 +158,16 @@ class JwtAuthenticationIntegrationTest {
                 String.class
         );
 
-        // Assert - Should be authenticated (200 or 404, not 401/403)
-        assertThat(response.getStatusCode()).isNotEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response.getStatusCode()).isNotEqualTo(HttpStatus.FORBIDDEN);
-
-        System.out.println("✅ Protected endpoint accessible with token. Status: " + response.getStatusCode());
+        // Assert
+        // We expect OK (if data exists) or NOT_FOUND (if no data), but NOT unauthorized
+        assertThat(response.getStatusCode())
+                .isNotIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN)
+                .isIn(HttpStatus.OK, HttpStatus.NOT_FOUND);
     }
 
     @Test
     @Order(5)
-    @DisplayName("5. Should reject access to protected endpoint without token")
+    @DisplayName("5. Should deny access to protected endpoint without token")
     void testProtectedEndpointWithoutToken() {
         // Act
         ResponseEntity<String> response = restTemplate.getForEntity(
@@ -177,17 +177,15 @@ class JwtAuthenticationIntegrationTest {
 
         // Assert
         assertThat(response.getStatusCode()).isIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN);
-
-        System.out.println("✅ Protected endpoint blocked without token. Status: " + response.getStatusCode());
     }
 
     @Test
     @Order(6)
-    @DisplayName("6. Should reject access with invalid token")
+    @DisplayName("6. Should deny access with invalid token")
     void testProtectedEndpointWithInvalidToken() {
         // Arrange
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth("INVALID_TOKEN_123");
+        headers.setBearerAuth("INVALID_TOKEN_SIGNATURE");
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         // Act
@@ -200,19 +198,19 @@ class JwtAuthenticationIntegrationTest {
 
         // Assert
         assertThat(response.getStatusCode()).isIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN);
-
-        System.out.println("✅ Invalid token rejected");
     }
 
     @Test
     @Order(7)
-    @DisplayName("7. Should refresh access token using refresh token")
+    @DisplayName("7. Should refresh access token using valid refresh token")
     void testTokenRefresh() {
         // Arrange
-        String requestBody = "{\"refreshToken\": \"" + refreshToken + "\"}";
+        Map<String, String> requestBody = new HashMap<>();
+        requestBody.put("refreshToken", refreshToken);
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
+        HttpEntity<Map<String, String>> entity = new HttpEntity<>(requestBody, headers);
 
         // Act
         ResponseEntity<String> response = restTemplate.postForEntity(
@@ -224,13 +222,11 @@ class JwtAuthenticationIntegrationTest {
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).contains("accessToken");
-
-        System.out.println("✅ Token refresh successful");
     }
 
     @Test
     @Order(8)
-    @DisplayName("8. Should access public endpoints without token")
+    @DisplayName("8. Should allow access to public endpoints without authentication")
     void testPublicEndpoints() {
         // Act
         ResponseEntity<String> healthResponse = restTemplate.getForEntity(
@@ -246,13 +242,21 @@ class JwtAuthenticationIntegrationTest {
         // Assert
         assertThat(healthResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(rootResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-
-        System.out.println("✅ Public endpoints accessible without token");
     }
 
-    @AfterAll
-    static void cleanup() {
-        System.out.println("\n📊 JWT Authentication Tests Complete!");
-        System.out.println("All security features verified ✅");
+    // Helper method to create a user for tests
+    private void populateUser(String username, String password) {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername(username);
+        request.setPassword(password);
+        request.setAge(25);
+        request.setWeightKg(70.0);
+        request.setHeightCm(170.0);
+        
+        restTemplate.postForEntity(
+                baseUrl + "/api/auth/register",
+                request,
+                LoginResponse.class
+        );
     }
 }

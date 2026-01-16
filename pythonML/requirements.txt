@@ -1,6 +1,3 @@
 fastapi
 uvicorn
 pydantic
-pytesseract
-Pillow
-python-multipart

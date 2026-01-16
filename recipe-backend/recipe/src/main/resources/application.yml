@@ -34,7 +34,7 @@ logging:
   level:
     org.springframework.web: INFO
     org.hibernate: INFO
-    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: DEBUG  
     org.hibernate.type.descriptor.sql: TRACE
     com.ai.SpringAIProject: DEBUG
 
