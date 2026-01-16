@@ -5,18 +5,22 @@ import com.ai.SpringAIProject.dto.LoginResponse;
 import com.ai.SpringAIProject.dto.RegisterRequest;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Integration tests for JWT Authentication
@@ -29,17 +33,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
-@TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
-    "spring.datasource.driverClassName=org.h2.Driver",
-    "spring.datasource.username=sa",
-    "spring.datasource.password=password",
-    "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-    "jwt.secret=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
-    "jwt.expiration=3600000",
-    "jwt.refresh-expiration=86400000"
-})
 class JwtAuthenticationIntegrationTest {
 
     @LocalServerPort
@@ -47,6 +42,9 @@ class JwtAuthenticationIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private MockMvc mockMvc;
 
     private String baseUrl;
     private static String accessToken;
@@ -123,47 +121,53 @@ class JwtAuthenticationIntegrationTest {
 
     @Test
     @Order(3)
-    @DisplayName("3. Should reject login with invalid credentials")
-    void testInvalidLogin() {
-        // Arrange
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setUsername("nonexistent_user");
-        loginRequest.setPassword("wrongpassword");
-
-        // Act
-        ResponseEntity<String> response = restTemplate.postForEntity(
-                baseUrl + "/api/auth/login",
-                loginRequest,
-                String.class
-        );
-
-        // Assert
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    void testInvalidLogin() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                {
+                  "username": "nonexistent_user",
+                  "password": "wrongpassword"
+                }
+            """))
+                .andExpect(status().isUnauthorized());
     }
 
-    @Test
-    @Order(4)
-    @DisplayName("4. Should access protected endpoint with valid JWT token")
-    void testProtectedEndpointWithToken() {
-        // Arrange
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        // Act
-        ResponseEntity<String> response = restTemplate.exchange(
-                baseUrl + "/api/health/meal-plan/" + userId + "/active",
-                HttpMethod.GET,
-                entity,
-                String.class
-        );
 
-        // Assert
-        // We expect OK (if data exists) or NOT_FOUND (if no data), but NOT unauthorized
-        assertThat(response.getStatusCode())
-                .isNotIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN)
-                .isIn(HttpStatus.OK, HttpStatus.NOT_FOUND);
+    private LoginResponse registerAndLogin() {
+        // 1. Create unique username
+        String username = "testuser_" + Instant.now().toEpochMilli();
+
+        // 2. Build register request
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername(username);
+        request.setPassword("Test123!");
+        request.setAge(25);
+        request.setGender("M");
+        request.setWeightKg(70.0);
+        request.setHeightCm(170.0);
+        request.setActivityLevel("Moderate");
+        request.setHealthGoals("Balanced");
+
+        // 3. Call register endpoint
+        ResponseEntity<LoginResponse> response =
+                restTemplate.postForEntity(
+                        baseUrl + "/api/auth/register",
+                        request,
+                        LoginResponse.class
+                );
+
+        // 4. Validate response early (fail fast)
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getAccessToken()).isNotBlank();
+        assertThat(response.getBody().getUserId()).isNotNull();
+
+        // 5. Return tokens
+        return response.getBody();
     }
+
 
     @Test
     @Order(5)

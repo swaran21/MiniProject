@@ -101,7 +101,9 @@ describe('AuthContext', () => {
         screen.getByText('Logout').click();
 
         // Assert
-        expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
+        await waitFor(() => {
+            expect(screen.getByTestId('auth-status')).toHaveTextContent('Not Authenticated');
+        });
         expect(localStorage.getItem('accessToken')).toBeNull();
     });
 });

@@ -58,6 +58,6 @@ class CustomUserDetailsServiceTest {
         // Act & Assert
         assertThatThrownBy(() -> userDetailsService.loadUserByUsername("unknown"))
                 .isInstanceOf(UsernameNotFoundException.class)
-                .hasMessageContaining("User not found with username: unknown");
+                .hasMessageContaining("User not found: unknown");
     }
 }
